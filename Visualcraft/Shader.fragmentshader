@@ -1,0 +1,44 @@
+#version 330 core
+
+in vec4 vertex_position_worldspace;
+in vec3 vertex_position_modelspace;
+in vec2 vertex_UV;
+in float heightmap;
+out vec4 color;
+
+uniform sampler2D textureAtlasSampler;
+
+void main()
+{
+	// Beneath the water surface: Sand with water
+	if (vertex_position_worldspace.y < -0.49) {
+		color = mix(texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.0f)), texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.2f)), 0.5);
+	}
+	// Little above the water surface: Sand
+	else if (vertex_position_worldspace.y < 0.51) {
+		color = texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.0f)); // sand
+	}
+	// High above the water surface: Grass path
+	else if (vertex_position_worldspace.y < 1.51 - heightmap - 2)
+	{
+		// Top face
+		if (vertex_position_modelspace.y > 0.48) {
+			color = texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.0f)); // grassPathTop
+		}
+		// Side or bottom faces
+		else {
+			color = texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.0f)); // grassPathSide
+		}
+	}
+	// Highest block: Grass block
+	else {
+		// Top face
+		if (vertex_position_modelspace.y > 0.48) {
+			color = texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.0f)); // grassBlockTop
+		}
+		// Side or bottom faces
+		else {
+			color = texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.0f)); // grassBlockSide
+		}
+	}
+}

@@ -1,0 +1,36 @@
+#version 330 core
+
+// input vertex and UV coordinates, different for all executions of this shader
+layout(location = 0) in vec3 vertexPosition_modelspace;
+layout(location = 1) in vec3 vertexNormal_modelspace;
+layout(location = 2) in vec2 vertexUV;
+layout(location = 3) in vec3 voxelPositions;
+layout(location = 4) in float heightMap;
+
+out vec4 vertex_position_worldspace;
+out vec3 vertex_position_modelspace;
+out vec2 vertex_UV;
+out float heightmap;
+
+// model view projection matrix
+uniform mat4 M;
+uniform mat4 V;
+uniform mat4 P;
+
+void main()
+{
+	vec4 coordinates_modelspace = vec4(vertexPosition_modelspace, 1.0);
+	vertex_position_worldspace = M * coordinates_modelspace;
+
+	vertex_position_worldspace += vec4(
+		voxelPositions.x,
+		-voxelPositions.y - heightMap,
+		-voxelPositions.z,
+		1.0
+	);
+
+	vertex_position_modelspace = vec3(vertexPosition_modelspace);
+	vertex_UV = vertexUV;
+	heightmap = heightMap;
+	gl_Position = P * V * vertex_position_worldspace;
+}
