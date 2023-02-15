@@ -4,6 +4,7 @@
 #include <vector>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
+#include <common/light.h>
 
 class Model {
 private:
@@ -23,7 +24,7 @@ public:
 	void evaluateMap(int grid_size);
 	void bind();
 	void render(GLuint program, GLuint projectionMatrixLocation, GLuint viewMatrixLocation, GLuint modelMatrixLocation, glm::mat4 projectionMatrix, glm::mat4 viewMatrix, glm::mat4 modelMatrix,
-		int id, GLuint objectIDLocation, GLuint textureAtlas, GLuint textureAtlasSampler, int count
+		int id, GLuint objectIDLocation, GLuint textureAtlas, GLuint textureAtlasSampler, Light* light, GLuint LaLocation, GLuint LdLocation, GLuint LsLocation, GLuint lightPositionLocation, GLuint lightPowerLocation, int count
 	);
 	~Model();
 };

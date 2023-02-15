@@ -1,5 +1,13 @@
 #version 330 core
 
+struct Light {
+	vec4 La;
+	vec4 Ld;
+	vec4 Ls;
+	vec4 lightPosition_worldspace;
+	float power;
+};
+
 in vec3 vertex_position_modelspace;
 in vec2 vertex_UV;
 
@@ -7,6 +15,7 @@ out vec4 color;
 
 uniform sampler2D textureAtlasSampler;
 uniform int objectID;
+uniform Light light;
 
 void main()
 {

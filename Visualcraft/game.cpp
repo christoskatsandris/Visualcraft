@@ -11,6 +11,7 @@
 
 // Include utilities
 #include <common/camera.h>
+#include <common/light.h>
 #include <common/model.h>
 #include <common/PerlinNoise.h>
 #include <common/shader.h>
@@ -56,6 +57,7 @@ void allowCameraMove(int thisx, int thisz, bool* out_front, bool* out_back, bool
 GLFWwindow* window;
 GLuint shaderProgram, objectProgram;
 Camera* camera;
+Light* light;
 
 // Object models
 Voxel* voxelModel;
@@ -66,6 +68,10 @@ Object* treeModel, * rockModel;
 // GLSL variables: Uniform variable locations
 GLuint modelMatrixLocation, viewMatrixLocation, projectionMatrixLocation;
 GLuint objectIDLocation;
+
+// GLSL variables: Light uniform variable location
+GLuint shaderLaLocation, shaderLdLocation, shaderLsLocation, shaderLightPositionLocation, shaderLightPowerLocation;
+GLuint objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation;
 
 // GLSL variables: Textures and samplers
 GLuint textureAtlas;
@@ -90,6 +96,18 @@ void prepareShaders() {
 
     objectIDLocation = glGetUniformLocation(objectProgram, "objectID");
 
+    shaderLaLocation = glGetUniformLocation(shaderProgram, "light.La");
+    shaderLdLocation = glGetUniformLocation(shaderProgram, "light.Ld");
+    shaderLsLocation = glGetUniformLocation(shaderProgram, "light.Ls");
+    shaderLightPositionLocation = glGetUniformLocation(shaderProgram, "light.lightPosition_worldspace");
+    shaderLightPowerLocation = glGetUniformLocation(shaderProgram, "light.power");
+
+    objectLaLocation = glGetUniformLocation(objectProgram, "light.La");
+    objectLdLocation = glGetUniformLocation(objectProgram, "light.Ld");
+    objectLsLocation = glGetUniformLocation(objectProgram, "light.Ls");
+    objectLightPositionLocation = glGetUniformLocation(objectProgram, "light.lightPosition_worldspace");
+    objectLightPowerLocation = glGetUniformLocation(objectProgram, "light.power");
+
     // Draw wire frame triangles or fill: GL_LINE or GL_FILL
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
@@ -106,6 +124,7 @@ void createModels() {
     //dogModel = new Animal();
     voxelModel->heightMap = createPerlinNoise(GRID_SIZE, GRID_SIZE, GRID_SIZE);
     camera = setCameraLocation(0, 0);
+    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec3{ -GRID_SIZE,3000,-GRID_SIZE }, 10000000.0f);
     calculateVoxelPositions();
     calculateTreePositions();
     calculateRockPositions();
@@ -196,30 +215,33 @@ void createContext() {
     //dogModel->createContext(dogModel->positions, dogModel->heightMap);
 }
 
+void lighting_pass() {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, W_WIDTH, W_HEIGHT);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(shaderProgram);
+
+    // Render world
+    voxelModel->render(shaderProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), NULL, NULL, textureAtlas, shaderTextureAtlasSampler, light, shaderLaLocation, shaderLdLocation, shaderLsLocation, shaderLightPositionLocation, shaderLightPowerLocation, GRID_SIZE * GRID_SIZE);
+    treeModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 1, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, treeModel->positions.size());
+    rockModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 2, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, rockModel->positions.size());
+    //cowModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 3, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, cowModel->positions.size());
+    //dogModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 4, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, dogModel->positions.size());
+}
+
 void mainLoop() {
     bool frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed;
     do {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glUseProgram(shaderProgram);
-
-        // Camera
+        // Update camera and terrain properties
         int thisx, thisz;
         getBlockPositionFromCoordinates(camera->position.x, camera->position.z, &thisx, &thisz);
-
         allowCameraMove(thisx, thisz, &frontMoveAllowed, &backMoveAllowed, &rightMoveAllowed, &leftMoveAllowed, &jumpAllowed);
         camera->update(getColumnHighestBlock(thisx, thisz), frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed);
+        light->update();
 
-        mat4 projectionMatrix = camera->projectionMatrix;
-        mat4 viewMatrix = camera->viewMatrix;
-        mat4 modelMatrix = mat4();
+        lighting_pass();
 
-        // Render world
-        voxelModel->render(shaderProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, NULL, NULL, textureAtlas, shaderTextureAtlasSampler, GRID_SIZE * GRID_SIZE);
-        treeModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 1, objectIDLocation, textureAtlas, objectTextureAtlasSampler, treeModel->positions.size());
-        rockModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 2, objectIDLocation, textureAtlas, objectTextureAtlasSampler, rockModel->positions.size());
-        //cowModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 3, objectIDLocation, textureAtlas, objectTextureAtlasSampler, cowModel->positions.size());
-        //dogModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 4, objectIDLocation, textureAtlas, objectTextureAtlasSampler, dogModel->positions.size());
-        
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

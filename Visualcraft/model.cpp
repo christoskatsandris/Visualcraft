@@ -57,7 +57,7 @@ void Model::bind() {
 }
 
 void Model::render(GLuint program, GLuint projectionMatrixLocation, GLuint viewMatrixLocation, GLuint modelMatrixLocation, glm::mat4 projectionMatrix, glm::mat4 viewMatrix, glm::mat4 modelMatrix,
-    int id, GLuint objectIDLocation, GLuint textureAtlas, GLuint textureAtlasSampler, int count
+    int id, GLuint objectIDLocation, GLuint textureAtlas, GLuint textureAtlasSampler, Light* light, GLuint LaLocation, GLuint LdLocation, GLuint LsLocation, GLuint lightPositionLocation, GLuint lightPowerLocation, int count
 ) {
     glUseProgram(program);
     this->bind();
@@ -65,6 +65,8 @@ void Model::render(GLuint program, GLuint projectionMatrixLocation, GLuint viewM
     glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
     glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(modelMatrixLocation, 1, GL_FALSE, &modelMatrix[0][0]);
+
+    light->uploadToShader(LaLocation, LdLocation, LsLocation, lightPositionLocation, lightPowerLocation);
 
     if (id != NULL) {
         glUniform1i(objectIDLocation, id);

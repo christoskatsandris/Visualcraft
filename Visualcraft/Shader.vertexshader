@@ -9,6 +9,8 @@ layout(location = 4) in float heightMap;
 
 out vec4 vertex_position_worldspace;
 out vec3 vertex_position_modelspace;
+out vec3 vertex_position_cameraspace;
+out vec3 vertex_normal_cameraspace;
 out vec2 vertex_UV;
 out float heightmap;
 
@@ -30,6 +32,8 @@ void main()
 	);
 
 	vertex_position_modelspace = vec3(vertexPosition_modelspace);
+	vertex_position_cameraspace = (V * vertex_position_worldspace).xyz;
+	vertex_normal_cameraspace = (V * M * vec4(vertexNormal_modelspace, 0)).xyz;
 	vertex_UV = vertexUV;
 	heightmap = heightMap;
 	gl_Position = P * V * vertex_position_worldspace;

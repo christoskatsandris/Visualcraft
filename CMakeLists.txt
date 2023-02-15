@@ -112,6 +112,8 @@ add_executable(Visualcraft
 
   common/camera.h
   common/camera.cpp
+  common/light.h
+  common/light.cpp
   common/model.h
   common/model.cpp
   common/PerlinNoise.h
