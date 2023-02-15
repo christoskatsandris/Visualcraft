@@ -144,12 +144,12 @@ set_target_properties(Visualcraft
   FOLDER "Game"
 )
 
-if(WIN32)
-  set_target_properties(Visualcraft
-    PROPERTIES
-    LINK_FLAGS "/ENTRY:mainCRTStartup /SUBSYSTEM:WINDOWS"
-  )
-endif()
+#if(WIN32)
+#  set_target_properties(Visualcraft
+#    PROPERTIES
+#    LINK_FLAGS "/ENTRY:mainCRTStartup /SUBSYSTEM:WINDOWS"
+#  )
+#endif()
 
 create_target_launcher(Visualcraft WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Visualcraft/")
 create_default_target_launcher(Visualcraft WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Visualcraft")
