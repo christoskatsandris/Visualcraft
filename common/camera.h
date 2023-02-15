@@ -23,8 +23,9 @@ public:
     bool jump;
     int jumpSteps;
     std::vector<float> heightMap;
+    bool freeMovement;
 
-    Camera(GLFWwindow* window, glm::vec3 position, float horizontalAngle, float verticalAngle, std::vector<float> heightMap);
+    Camera(GLFWwindow* window, glm::vec3 position, float horizontalAngle, float verticalAngle, std::vector<float> heightMap, bool freeMovement);
     void update(float columnHighestBlock, bool frontMoveAllowed, bool backMoveAllowed, bool rightMoveAllowed, bool leftMoveAllowed, bool jumpAlloweds);
 };
 
