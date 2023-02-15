@@ -12,7 +12,7 @@ using namespace glm;
 Camera::Camera(GLFWwindow* window, vec3 position, float horizontalAngle, float verticalAngle, vector<float> heightMap, bool freeMovement)
     : window(window), position(position), horizontalAngle(horizontalAngle), verticalAngle(verticalAngle), heightMap(heightMap), freeMovement(freeMovement) {
     FoV = 45.0f;
-    speed = 3.0f;
+    speed = 6.0f;
     mouseSpeed = 0.001f;
     fovSpeed = 2.0f;
     jump = false;
@@ -84,11 +84,11 @@ void Camera::update(float columnHighestBlock, bool frontMoveAllowed, bool backMo
     else {
         // Camera movement that moves based on direction/right vectors, and obeys terrain
         // Fall down
-        if (columnHighestBlock + 0.6 < position.y && !jump) {
+        if (columnHighestBlock + 1.2 < position.y && !jump) {
             position -= vec3(0, 1, 0) * deltaTime * speed;
         }
         // Jump
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && jumpAllowed && columnHighestBlock + 0.6 >= position.y) {
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && jumpAllowed && columnHighestBlock + 1.2 >= position.y) {
             jump = true;
         }
         if (jump) {

@@ -331,7 +331,7 @@ Camera* setCameraLocation(float x, float z) {
     getBlockPositionFromCoordinates(x, z, &x_quantized, &z_quantized);
     return new Camera(
         window,
-        vec3(0.5 * x, getColumnHighestBlock(x_quantized, z_quantized) + 0.6, -0.5 * z),
+        vec3(x, getColumnHighestBlock(x_quantized, z_quantized) + 1.2, -z),
         0, - 3.14f / 16.0f,
         voxelModel->heightMap,
         false
@@ -339,12 +339,12 @@ Camera* setCameraLocation(float x, float z) {
 }
 
 float getColumnHighestBlock(int x_quantized, int z_quantized) {
-    return -0.5f * voxelModel->heightMap[GRID_SIZE * x_quantized + z_quantized] + 0.5f;
+    return -voxelModel->heightMap[GRID_SIZE * x_quantized + z_quantized] + 1.0f;
 }
 
 void getBlockPositionFromCoordinates(float x, float z, int* out_x, int* out_z) {
-    *out_x = floor(2 * (x + 0.25)) + GRID_SIZE / 2;
-    *out_z = floor(2 * (-z + 0.25)) + GRID_SIZE / 2;
+    *out_x = floor(x + 0.5) + GRID_SIZE / 2;
+    *out_z = floor(-z + 0.5) + GRID_SIZE / 2;
 }
 
 int generateRandomNumber(int start, int end) {
