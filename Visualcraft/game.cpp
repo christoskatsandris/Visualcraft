@@ -124,7 +124,22 @@ void createModels() {
     //dogModel = new Animal();
     voxelModel->heightMap = createPerlinNoise(GRID_SIZE, GRID_SIZE, GRID_SIZE);
     camera = setCameraLocation(0, 0);
-    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec3{ -GRID_SIZE,3000,-GRID_SIZE }, 10000000.0f);
+    light = new Light(
+        window, 
+        vec4{ 1,1,1,1 }, 
+        vec4{ 1,1,1,1 }, 
+        vec4{ 1,1,1,1 }, 
+        //vec3{ 
+        //    // Cartesian to spherical coordinates
+        //    -GRID_SIZE,
+        //    3000,
+        //    -GRID_SIZE 
+        //}, 
+        3159.11,
+        1.79423,
+        1.34156,
+        10000000.0f
+    );
     calculateVoxelPositions();
     calculateTreePositions();
     calculateRockPositions();
@@ -356,7 +371,7 @@ Camera* setCameraLocation(float x, float z) {
         vec3(x, getColumnHighestBlock(x_quantized, z_quantized) + 1.2, -z),
         0, - 3.14f / 16.0f,
         voxelModel->heightMap,
-        false
+        true
     );
 }
 

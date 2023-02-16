@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iostream>
 
 using namespace glm;
 
@@ -14,6 +15,34 @@ Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::
     nearPlane = 1.0;
     farPlane = 30.0;
 
+    rho = sqrt(pow(lightPosition_worldspace.x, 2) + pow(lightPosition_worldspace.y, 2) + pow(lightPosition_worldspace.z, 2));
+    phiAngle = -acos(lightPosition_worldspace.z / rho);
+    thetaAngle = atan(lightPosition_worldspace.y / lightPosition_worldspace.x);
+
+    std::cout << "rho " << rho << " phi " << phiAngle << " theta " << thetaAngle << std::endl;
+
+    direction = normalize(targetPosition - lightPosition_worldspace);
+
+    lightSpeed = 0.1f;
+    targetPosition = glm::vec3(0.0, 0.0, 0.0);
+
+    projectionMatrix = ortho(-10.0f, 10.0f, -10.0f, 10.0f, nearPlane, farPlane);
+    orthoProj = true;
+}
+
+Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float rho, float phi, float theta, float power)
+    : window(window), La(La), Ld(Ld), Ls(Ls), rho(rho), phiAngle(phi), thetaAngle(theta), power(power)
+{
+    // setting near and far plane affects the detail of the shadow
+    nearPlane = 1.0;
+    farPlane = 30.0;
+
+    lightPosition_worldspace = vec3(
+        rho * sin(phi) * cos(theta),
+        rho * sin(phi) * sin(theta),
+        rho * cos(phi)
+    );
+    
     direction = normalize(targetPosition - lightPosition_worldspace);
 
     lightSpeed = 0.1f;
@@ -24,27 +53,47 @@ Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::
 }
 
 void Light::update() {
-    // Move across z-axis
-    if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
-        lightPosition_worldspace += lightSpeed * vec3(0.0, 0.0, 1.0);
+    //// Move across z-axis
+    //if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
+    //    lightPosition_worldspace += lightSpeed * vec3(0.0, 0.0, 1.0);
+    //}
+    //if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) {
+    //    lightPosition_worldspace -= lightSpeed * vec3(0.0, 0.0, 1.0);
+    //}
+    //// Move across x-axis
+    //if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
+    //    lightPosition_worldspace += lightSpeed * vec3(1.0, 0.0, 0.0);
+    //}
+    //if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+    //    lightPosition_worldspace -= lightSpeed * vec3(1.0, 0.0, 0.0);
+    //}
+    //// Move across y-axis
+    //if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+    //    lightPosition_worldspace += lightSpeed * vec3(0.0, 1.0, 0.0);
+    //}
+    //if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+    //    lightPosition_worldspace -= lightSpeed * vec3(0.0, 1.0, 0.0);
+    //}
+
+    phiAngle += 0.004f;
+    if (phiAngle >= 2 * 3.14f) phiAngle = 0;
+
+    // Update sky color to match daylight
+    if (lightPosition_worldspace.x > 110) {
+        glClearColor(0.53f * (lightPosition_worldspace.x / 700), 0.81f * (lightPosition_worldspace.x / 700), 0.92f * (lightPosition_worldspace.x / 700), 0.5f);
     }
-    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) {
-        lightPosition_worldspace -= lightSpeed * vec3(0.0, 0.0, 1.0);
+    else {
+        glClearColor(0.53f * (110.0f / 700.0f), 0.81f * (110.0f / 700.0f), 0.92f * (110.0f / 700.0f), 0.5f);
     }
-    // Move across x-axis
-    if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
-        lightPosition_worldspace += lightSpeed * vec3(1.0, 0.0, 0.0);
-    }
-    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
-        lightPosition_worldspace -= lightSpeed * vec3(1.0, 0.0, 0.0);
-    }
-    // Move across y-axis
-    if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
-        lightPosition_worldspace += lightSpeed * vec3(0.0, 1.0, 0.0);
-    }
-    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
-        lightPosition_worldspace -= lightSpeed * vec3(0.0, 1.0, 0.0);
-    }
+
+    std::cout << "Light (" << lightPosition_worldspace.x << ", " << lightPosition_worldspace.y << ", " << lightPosition_worldspace.z << ")" << std::endl;
+
+    lightPosition_worldspace = vec3(
+        rho * sin(phiAngle) * cos(thetaAngle),
+        rho * sin(phiAngle) * sin(thetaAngle),
+        rho * cos(phiAngle)
+    );
+
 
     // We have the direction of the light and the point where the light is looking at
     // We will use this information to calculate the "up" vector, 

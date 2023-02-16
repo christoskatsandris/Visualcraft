@@ -20,8 +20,9 @@ public:
 
     float power;
 
-    float nearPlane;
-    float farPlane;
+    float nearPlane, farPlane;
+
+    float rho, phiAngle, thetaAngle;
 
     bool orthoProj;
 
@@ -31,8 +32,11 @@ public:
     // Where the light will look at
     glm::vec3 targetPosition;
 
-    // Constructor
+    // Constructor with cartesian coordinates
     Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::vec3 position, float power);
+
+    // Constructor with spherical coordinates
+    Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float rho, float phi, float theta, float power);
 
     void update();
     void uploadToShader(GLuint LaLocation, GLuint LdLocation, GLuint LsLocation, GLuint positionLocation, GLuint powerLocation);
