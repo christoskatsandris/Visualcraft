@@ -79,6 +79,11 @@ void prepareShaders() {
 
     // Draw wire frame triangles or fill: GL_LINE or GL_FILL
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Create light
+    // Cartesian coordinates (x,y,z) = (-GRID_SIZE, 3000, -GRID_SIZE)
+    // Spherical coordinates (rho, phi, theta) = (3159.11, 1.79423, 1.34156)
+    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, 3159.11, 1.79423, 1.34156, 10000000.0f);
 }
 
 void createModels() {
@@ -91,24 +96,11 @@ void createModels() {
     //cowModel = new Animal();
     //cout << endl << "========= Dog  =========" << endl;
     //dogModel = new Animal();
+
     voxelModel->heightMap = createPerlinNoise(GRID_SIZE, GRID_SIZE, GRID_SIZE);
+
     camera = setCameraLocation(0, 0);
-    light = new Light(
-        window, 
-        vec4{ 1,1,1,1 }, 
-        vec4{ 1,1,1,1 }, 
-        vec4{ 1,1,1,1 }, 
-        //vec3{ 
-        //    // Cartesian to spherical coordinates
-        //    -GRID_SIZE,
-        //    3000,
-        //    -GRID_SIZE 
-        //}, 
-        3159.11,
-        1.79423,
-        1.34156,
-        10000000.0f
-    );
+
     calculateVoxelPositions();
     calculateTreePositions();
     calculateRockPositions();
