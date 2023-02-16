@@ -371,7 +371,7 @@ Camera* setCameraLocation(float x, float z) {
         vec3(x, getColumnHighestBlock(x_quantized, z_quantized) + 1.2, -z),
         0, - 3.14f / 16.0f,
         voxelModel->heightMap,
-        true
+        false
     );
 }
 

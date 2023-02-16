@@ -4,7 +4,6 @@
 #include <glm/glm.hpp>
 #include <glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
 
 using namespace glm;
 
@@ -18,8 +17,6 @@ Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::
     rho = sqrt(pow(lightPosition_worldspace.x, 2) + pow(lightPosition_worldspace.y, 2) + pow(lightPosition_worldspace.z, 2));
     phiAngle = -acos(lightPosition_worldspace.z / rho);
     thetaAngle = atan(lightPosition_worldspace.y / lightPosition_worldspace.x);
-
-    std::cout << "rho " << rho << " phi " << phiAngle << " theta " << thetaAngle << std::endl;
 
     direction = normalize(targetPosition - lightPosition_worldspace);
 
@@ -75,7 +72,7 @@ void Light::update() {
     //    lightPosition_worldspace -= lightSpeed * vec3(0.0, 1.0, 0.0);
     //}
 
-    phiAngle += 0.004f;
+    phiAngle += 0.0005f;
     if (phiAngle >= 2 * 3.14f) phiAngle = 0;
 
     // Update sky color to match daylight
@@ -86,14 +83,11 @@ void Light::update() {
         glClearColor(0.53f * (110.0f / 700.0f), 0.81f * (110.0f / 700.0f), 0.92f * (110.0f / 700.0f), 0.5f);
     }
 
-    std::cout << "Light (" << lightPosition_worldspace.x << ", " << lightPosition_worldspace.y << ", " << lightPosition_worldspace.z << ")" << std::endl;
-
     lightPosition_worldspace = vec3(
         rho * sin(phiAngle) * cos(thetaAngle),
         rho * sin(phiAngle) * sin(thetaAngle),
         rho * cos(phiAngle)
     );
-
 
     // We have the direction of the light and the point where the light is looking at
     // We will use this information to calculate the "up" vector, 
