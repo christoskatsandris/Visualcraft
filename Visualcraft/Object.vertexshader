@@ -6,7 +6,10 @@ layout(location = 2) in vec2 vertexUV;
 layout(location = 3) in vec3 objectPositions;
 layout(location = 4) in float heightMap;
 
+out vec4 vertex_position_worldspace;
 out vec3 vertex_position_modelspace;
+out vec3 vertex_position_cameraspace;
+out vec3 vertex_normal_cameraspace;
 out vec2 vertex_UV;
 
 uniform mat4 M;
@@ -17,7 +20,6 @@ uniform int objectID;
 
 void main()
 {
-	vec4 vertex_position_worldspace;
 	vec4 coordinates_modelspace = vec4(vertexPosition_modelspace, 1.0);
 	vertex_position_worldspace = M * coordinates_modelspace;
 
@@ -42,6 +44,8 @@ void main()
 	}
 
 	vertex_position_modelspace = vec3(vertexPosition_modelspace);
+	vertex_position_cameraspace = (V * vertex_position_worldspace).xyz;
+	vertex_normal_cameraspace = (V * M * vec4(vertexNormal_modelspace, 0)).xyz;
 	vertex_UV = vertexUV;
 	gl_Position = P * V * vertex_position_worldspace;
 }

@@ -4,49 +4,95 @@ struct Light {
 	vec4 La;
 	vec4 Ld;
 	vec4 Ls;
-	vec4 lightPosition_worldspace;
+	vec3 lightPosition_worldspace;
 	float power;
 };
 
+in vec4 vertex_position_worldspace;
 in vec3 vertex_position_modelspace;
+in vec3 vertex_position_cameraspace;
+in vec3 vertex_normal_cameraspace;
 in vec2 vertex_UV;
 
 out vec4 color;
 
+uniform mat4 V;
 uniform sampler2D textureAtlasSampler;
 uniform int objectID;
 uniform Light light;
 
-void main()
+vec4 phong(float visibility, Light lightParam, vec4 chosenTexture) {
+    vec4 _Ka = vec4(0.1, 0.1, 0.1, chosenTexture.a);
+    vec4 _Kd = chosenTexture;
+    vec4 _Ks = 0.1 * chosenTexture;
+    float _Ns = 10;
+    
+    // model ambient intensity (Ia)
+    vec4 Ia = lightParam.La * _Ka;
+
+    // model diffuse intensity (Id)
+    vec3 N = normalize(vertex_normal_cameraspace); 
+    vec3 L = normalize((V * vec4(lightParam.lightPosition_worldspace, 1)).xyz - vertex_position_cameraspace);
+    float cosTheta = clamp(dot(L, N), 0, 1);
+    vec4 Id = lightParam.Ld * _Kd * cosTheta;
+
+    // model specular intensity (Is)
+    vec3 R = reflect(-L, N);
+    vec3 E = normalize(- vertex_position_cameraspace);
+    float cosAlpha = clamp(dot(E, R), 0, 1);
+    float specular_factor = pow(cosAlpha, _Ns);
+    vec4 Is = lightParam.Ls * _Ks * specular_factor;
+
+    //model the light distance effect
+    float distance = length(lightParam.lightPosition_worldspace - vertex_position_worldspace.xyz);
+    float distance_sq = distance * distance;
+
+    // final fragment color
+    return vec4(
+        Ia +
+        visibility * Id * lightParam.power / distance_sq +
+        visibility * Is * lightParam.power / distance_sq
+    );
+}
+
+vec4 chooseTexture()
 {
+	vec4 chosenTexture;
+
 	switch (objectID) {
 		case 1: // Tree
 			// Log
 			if (vertex_position_modelspace.y < 0.495) {
 				// Top face
 				if (vertex_position_modelspace.y > 0.48) {
-					color = texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.2f));
+					chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.2f));
 				}
 				// Side or bottom faces
 				else {
-					color = texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.2f));
+					chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.2f));
 				}
 			}
 			// Leaves
 			else {
-				color = texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.2f));
+				chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.2f));
 			}
 			break;
 
 		case 2: // Rock
-			color = texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.2f));
+			chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.2f));
 			break;
 
 		case 3: // Dog
-			color = texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.4f));
+			chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.4f));
 			break;
 
 		default:
 			break;
 	}
+
+	return chosenTexture;
+}
+
+void main() {
+	color = phong(1, light, chooseTexture());
 }
