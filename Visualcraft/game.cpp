@@ -13,6 +13,7 @@
 #include <common/camera.h>
 #include <common/light.h>
 #include <common/model.h>
+#include <common/program.h>
 #include <common/PerlinNoise.h>
 #include <common/shader.h>
 #include <common/texture.h>
@@ -55,7 +56,7 @@ void allowCameraMove(int thisx, int thisz, bool* out_front, bool* out_back, bool
 
 // Global variables
 GLFWwindow* window;
-GLuint shaderProgram, objectProgram;
+Program* voxelShader, * objectShader;
 Camera* camera;
 Light* light;
 
@@ -65,48 +66,16 @@ Voxel* voxelModel;
 Object* treeModel, * rockModel;
 //Animal* cowModel, * dogModel;
 
-// GLSL variables: Uniform variable locations
-GLuint modelMatrixLocation, viewMatrixLocation, projectionMatrixLocation;
-GLuint objectIDLocation;
-
-// GLSL variables: Light uniform variable location
-GLuint shaderLaLocation, shaderLdLocation, shaderLsLocation, shaderLightPositionLocation, shaderLightPowerLocation;
-GLuint objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation;
-
-// GLSL variables: Textures and samplers
+// GLSL variables: Textures
 GLuint textureAtlas;
-GLuint shaderTextureAtlasSampler, objectTextureAtlasSampler;
 
 void prepareShaders() {
-    // Create and compile our GLSL program from the shaders
-    shaderProgram = loadShaders("Shader.vertexshader", "Shader.fragmentshader");
-    objectProgram = loadShaders("Object.vertexshader", "Object.fragmentshader");
+    // Create programs
+    voxelShader = new Program("Shader", false);
+    objectShader = new Program("Object", true);
 
     // Load texture maps
     textureAtlas = loadSOIL("../assets/textures/block/texture_atlas.png");
-
-    // Get a pointer to the texture samplers
-    shaderTextureAtlasSampler = glGetUniformLocation(shaderProgram, "textureAtlasSampler");
-    objectTextureAtlasSampler = glGetUniformLocation(objectProgram, "textureAtlasSampler");
-
-    // Get a pointer location to model matrix in the vertex shader
-    modelMatrixLocation = glGetUniformLocation(shaderProgram, "M");
-    viewMatrixLocation = glGetUniformLocation(shaderProgram, "V");
-    projectionMatrixLocation = glGetUniformLocation(shaderProgram, "P");
-
-    objectIDLocation = glGetUniformLocation(objectProgram, "objectID");
-
-    shaderLaLocation = glGetUniformLocation(shaderProgram, "light.La");
-    shaderLdLocation = glGetUniformLocation(shaderProgram, "light.Ld");
-    shaderLsLocation = glGetUniformLocation(shaderProgram, "light.Ls");
-    shaderLightPositionLocation = glGetUniformLocation(shaderProgram, "light.lightPosition_worldspace");
-    shaderLightPowerLocation = glGetUniformLocation(shaderProgram, "light.power");
-
-    objectLaLocation = glGetUniformLocation(objectProgram, "light.La");
-    objectLdLocation = glGetUniformLocation(objectProgram, "light.Ld");
-    objectLsLocation = glGetUniformLocation(objectProgram, "light.Ls");
-    objectLightPositionLocation = glGetUniformLocation(objectProgram, "light.lightPosition_worldspace");
-    objectLightPowerLocation = glGetUniformLocation(objectProgram, "light.power");
 
     // Draw wire frame triangles or fill: GL_LINE or GL_FILL
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -233,16 +202,15 @@ void createContext() {
 void lighting_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, W_WIDTH, W_HEIGHT);
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glUseProgram(shaderProgram);
 
-    // Render world
-    voxelModel->render(shaderProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), NULL, NULL, textureAtlas, shaderTextureAtlasSampler, light, shaderLaLocation, shaderLdLocation, shaderLsLocation, shaderLightPositionLocation, shaderLightPowerLocation, GRID_SIZE * GRID_SIZE);
-    treeModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 1, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, treeModel->positions.size());
-    rockModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 2, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, rockModel->positions.size());
-    //cowModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 3, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, cowModel->positions.size());
-    //dogModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, camera->projectionMatrix, camera->viewMatrix, mat4(), 4, objectIDLocation, textureAtlas, objectTextureAtlasSampler, light, objectLaLocation, objectLdLocation, objectLsLocation, objectLightPositionLocation, objectLightPowerLocation, dogModel->positions.size());
+    mat4 modelMatrix = mat4();
+
+    voxelModel->render(voxelShader, camera, modelMatrix, NULL, textureAtlas, light, GRID_SIZE * GRID_SIZE);
+    treeModel->render(objectShader, camera, modelMatrix, 1, textureAtlas, light, treeModel->positions.size());
+    rockModel->render(objectShader, camera, modelMatrix, 2, textureAtlas, light, rockModel->positions.size());
+    //cowModel->render(objectShader, camera, modelMatrix, 3, textureAtlas, light, cowModel->positions.size());
+    //dogModel->render(objectShader, camera, modelMatrix, 4, textureAtlas, light, dogModel->positions.size());
 }
 
 void mainLoop() {
@@ -334,8 +302,9 @@ void free() {
 
     glDeleteTextures(1, &textureAtlas);
 
-    glDeleteProgram(shaderProgram);
-    glDeleteProgram(objectProgram);
+    glDeleteProgram(voxelShader->program);
+    glDeleteProgram(objectShader->program);
+
     glfwTerminate();
 }
 

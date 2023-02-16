@@ -118,6 +118,8 @@ add_executable(Visualcraft
   common/model.cpp
   common/PerlinNoise.h
   common/PerlinNoise.cpp
+  common/program.h
+  common/program.cpp
   common/shader.h
   common/shader.cpp
   common/texture.h
