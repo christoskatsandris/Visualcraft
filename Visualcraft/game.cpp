@@ -61,7 +61,7 @@ void allowCameraMove(int thisx, int thisz, bool* out_front, bool* out_back, bool
 
 // Global variables
 GLFWwindow* window;
-Program* voxelShader, * objectShader, * depthVoxelShader, * depthObjectShader;
+Program* shader, * depthShader;
 DepthMapProgram* depthMapShader;
 Camera* camera;
 Light* light;
@@ -78,10 +78,8 @@ GLuint textureAtlas;
 
 void prepareShaders() {
     // Create programs
-    voxelShader = new LightProgram("Shader", false);
-    objectShader = new LightProgram("Object", true);
-    depthVoxelShader = new DepthProgram("DepthShader", false);
-    depthObjectShader = new DepthProgram("DepthObject", true);
+    shader = new LightProgram("Shader", true);
+    depthShader = new DepthProgram("DepthShader", true);
     depthMapShader = new DepthMapProgram("DepthMap");
 
     // Load texture maps
@@ -228,11 +226,11 @@ void depth_pass() {
 
     mat4 modelMatrix = mat4();
 
-    voxelModel->render(false, depthVoxelShader, modelMatrix, light->viewMatrix, light->projectionMatrix, NULL, NULL, NULL, GRID_SIZE * GRID_SIZE);
-    treeModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, NULL, NULL, treeModel->positions.size());
-    rockModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, NULL, NULL, rockModel->positions.size());
-    //cowModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, NULL, NULL, cowModel->positions.size());
-    //dogModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, NULL, NULL, dogModel->positions.size());
+    voxelModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 0, NULL, NULL, GRID_SIZE * GRID_SIZE);
+    treeModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, NULL, NULL, treeModel->positions.size());
+    rockModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, NULL, NULL, rockModel->positions.size());
+    //cowModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, NULL, NULL, cowModel->positions.size());
+    //dogModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, NULL, NULL, dogModel->positions.size());
 }
 
 void lighting_pass() {
@@ -241,21 +239,12 @@ void lighting_pass() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     mat4 modelMatrix = mat4();
-
-    if (glfwGetKey(window, GLFW_KEY_F1) != GLFW_PRESS) {
-        voxelModel->render(true, voxelShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, NULL, textureAtlas, light, GRID_SIZE * GRID_SIZE);
-        treeModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
-        rockModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
-        //cowModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, textureAtlas, light, cowModel->positions.size());
-        //dogModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
-    }
-    else {
-        voxelModel->render(true, voxelShader, modelMatrix, light->viewMatrix, light->projectionMatrix, NULL, textureAtlas, light, GRID_SIZE * GRID_SIZE);
-        treeModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
-        rockModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
-        //cowModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, textureAtlas, light, cowModel->positions.size());
-        //dogModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
-    }
+    
+    voxelModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 0, textureAtlas, light, GRID_SIZE * GRID_SIZE);
+    treeModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
+    rockModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
+    //cowModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, textureAtlas, light, cowModel->positions.size());
+    //dogModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
 }
 
 void renderDepthMap() {
@@ -278,8 +267,6 @@ void mainLoop() {
         allowCameraMove(thisx, thisz, &frontMoveAllowed, &backMoveAllowed, &rightMoveAllowed, &leftMoveAllowed, &jumpAllowed);
         camera->update(getColumnHighestBlock(thisx, thisz), frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed);
         light->update();
-
-        cout << "Light (" << (int)light->lightPosition_worldspace.x << ", " << (int)light->lightPosition_worldspace.y << ", " << (int)light->lightPosition_worldspace.z << ")" << endl;
 
         depth_pass();
         lighting_pass();
@@ -361,11 +348,9 @@ void free() {
     delete voxelModel, treeModel, rockModel;// , cowModel, dogModel;
 
     glDeleteTextures(1, &textureAtlas);
-
-    glDeleteProgram(voxelShader->program);
-    glDeleteProgram(objectShader->program);
-    glDeleteProgram(depthVoxelShader->program);
-    glDeleteProgram(depthObjectShader->program);
+    
+    glDeleteProgram(shader->program);
+    glDeleteProgram(depthShader->program);
     glDeleteProgram(depthMapShader->program);
 
     glfwTerminate();
@@ -403,7 +388,7 @@ Camera* setCameraLocation(float x, float z) {
         vec3(x, getColumnHighestBlock(x_quantized, z_quantized) + 1.2, -z),
         0, - 3.14f / 16.0f,
         voxelModel->heightMap,
-        true
+        false
     );
 }
 

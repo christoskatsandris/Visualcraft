@@ -2,7 +2,7 @@
 
 // Input vertex data, different for all executions of this shader.
 layout(location = 0) in vec3 vertexPosition_modelspace;
-layout(location = 3) in vec3 voxelPositions;
+layout(location = 3) in vec3 positions;
 layout(location = 4) in float heightMap;
 
 // Values that stay constant for the whole mesh.
@@ -10,16 +10,40 @@ uniform mat4 M;
 uniform mat4 V;
 uniform mat4 P;
 
+uniform int objectID;
+
 void main()
 {
 	vec4 vertex_position_worldspace = M * vec4(vertexPosition_modelspace, 1.0);
 
-	vertex_position_worldspace += vec4(
-		voxelPositions.x,
-		-voxelPositions.y - heightMap,
-		-voxelPositions.z,
-		0.0
-	);
+	switch (objectID) {
+		case 0: // Voxel
+			vertex_position_worldspace += vec4(
+				positions.x,
+				-positions.y - heightMap,
+				-positions.z,
+				0.0
+			);
+			break;
+
+		case 1: // Tree
+			vertex_position_worldspace += vec4(
+				positions.x - 2.0,
+				-positions.y - heightMap + 1.0,
+				-positions.z - 2.0,
+				0.0
+			);
+			break;
+
+		default: // Any other object
+			vertex_position_worldspace += vec4(
+				positions.x,
+				-positions.y - heightMap + 1.0,
+				-positions.z,
+				0.0
+			);
+			break;
+	}
 
     gl_Position =  P * V * vertex_position_worldspace;
 }

@@ -129,14 +129,10 @@ add_executable(Visualcraft
 
   Visualcraft/DepthMap.fragmentshader
   Visualcraft/DepthMap.vertexshader
-  Visualcraft/DepthObject.fragmentshader
-  Visualcraft/DepthObject.vertexshader
   Visualcraft/DepthShader.fragmentshader
   Visualcraft/DepthShader.vertexshader
   Visualcraft/Lamp.fragmentshader
   Visualcraft/Lamp.vertexshader
-  Visualcraft/Object.fragmentshader
-  Visualcraft/Object.vertexshader
   Visualcraft/Shader.fragmentshader
   Visualcraft/Shader.vertexshader
 )
