@@ -4,9 +4,13 @@
 
 using namespace std;
 
-Program::Program(string name, bool isObject) {
-	program = loadShaders((name+".vertexshader").c_str(), (name + ".fragmentshader").c_str());
-	
+BaseProgram::BaseProgram(string name) {
+	program = loadShaders((name + ".vertexshader").c_str(), (name + ".fragmentshader").c_str());
+}
+
+Program::Program(string name, bool isObject)
+	: BaseProgram(name)
+{
 	M = glGetUniformLocation(program, "M");
 	V = glGetUniformLocation(program, "V");
 	P = glGetUniformLocation(program, "P");
@@ -17,7 +21,17 @@ Program::Program(string name, bool isObject) {
 	else {
 		objectID = NULL;
 	}
+}
 
+DepthProgram::DepthProgram(string name, bool isObject)
+	: Program(name, isObject) 
+{
+
+}
+
+LightProgram::LightProgram(string name, bool isObject)
+	: Program(name, isObject)
+{
 	La = glGetUniformLocation(program, "light.La");
 	Ld = glGetUniformLocation(program, "light.Ld");
 	Ls = glGetUniformLocation(program, "light.Ls");
@@ -25,4 +39,13 @@ Program::Program(string name, bool isObject) {
 	lightPower = glGetUniformLocation(program, "light.power");
 
 	textureAtlas = glGetUniformLocation(program, "textureAtlasSampler");
+
+	lightVP = glGetUniformLocation(program, "lightVP");
+	depthMap = glGetUniformLocation(program, "shadowMapSampler");
+}
+
+DepthMapProgram::DepthMapProgram(string name)
+	: BaseProgram(name)
+{
+	texture = glGetUniformLocation(program, "textureSampler");
 }

@@ -39,6 +39,9 @@ void calculateRockPositions();
 //void calculateDogPositions();
 void determineNeighbors();
 void createContext();
+void depth_pass();
+void lighting_pass();
+void renderDepthMap();
 void mainLoop();
 void free();
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -51,14 +54,18 @@ void allowCameraMove(int thisx, int thisz, bool* out_front, bool* out_back, bool
 // Global definitions
 #define W_WIDTH 1024
 #define W_HEIGHT 768
+#define SHADOW_WIDTH 1024
+#define SHADOW_HEIGHT 1024
 #define W_TITLE "Visualcraft"
 #define GRID_SIZE 700
 
 // Global variables
 GLFWwindow* window;
-Program* voxelShader, * objectShader;
+Program* voxelShader, * objectShader, * depthVoxelShader, * depthObjectShader;
+DepthMapProgram* depthMapShader;
 Camera* camera;
 Light* light;
+Drawable* depthMap;
 
 // Object models
 Voxel* voxelModel;
@@ -71,8 +78,11 @@ GLuint textureAtlas;
 
 void prepareShaders() {
     // Create programs
-    voxelShader = new Program("Shader", false);
-    objectShader = new Program("Object", true);
+    voxelShader = new LightProgram("Shader", false);
+    objectShader = new LightProgram("Object", true);
+    depthVoxelShader = new DepthProgram("DepthShader", false);
+    depthObjectShader = new DepthProgram("DepthObject", true);
+    depthMapShader = new DepthMapProgram("DepthMap");
 
     // Load texture maps
     textureAtlas = loadSOIL("../assets/textures/block/texture_atlas.png");
@@ -83,7 +93,7 @@ void prepareShaders() {
     // Create light
     // Cartesian coordinates (x,y,z) = (-GRID_SIZE, 3000, -GRID_SIZE)
     // Spherical coordinates (rho, phi, theta) = (3159.11, 1.79423, 1.34156)
-    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, 3159.11, 1.79423, 1.34156, 10000000.0f);
+    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, 3159.11f, 1.79423f, 1.34156f, 10000000.0f, SHADOW_WIDTH, SHADOW_HEIGHT);
 }
 
 void createModels() {
@@ -107,6 +117,26 @@ void createModels() {
     //calculateCowPositions();
     //calculateDogPositions();
     //determineNeighbors();
+
+    vector<vec3> quadVertices = {
+        vec3(0.5, 0.5, 0.0),
+        vec3(1.0, 0.5, 0.0),
+        vec3(1.0, 1.0, 0.0),
+        vec3(1.0, 1.0, 0.0),
+        vec3(0.5, 1.0, 0.0),
+        vec3(0.5, 0.5, 0.0)
+    };
+
+    vector<vec2> quadUVs = {
+        vec2(0.0, 0.0),
+        vec2(1.0, 0.0),
+        vec2(1.0, 1.0),
+        vec2(1.0, 1.0),
+        vec2(0.0, 1.0),
+        vec2(0.0, 0.0)
+    };
+
+    depthMap = new Drawable(quadVertices, quadUVs);
 }
 
 void calculateVoxelPositions() {
@@ -191,6 +221,20 @@ void createContext() {
     //dogModel->createContext(dogModel->positions, dogModel->heightMap);
 }
 
+void depth_pass() {
+    glBindFramebuffer(GL_FRAMEBUFFER, light->depthFramebuffer);
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    mat4 modelMatrix = mat4();
+
+    voxelModel->render(false, depthVoxelShader, modelMatrix, light->viewMatrix, light->projectionMatrix, NULL, NULL, NULL, GRID_SIZE * GRID_SIZE);
+    treeModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, NULL, NULL, treeModel->positions.size());
+    rockModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, NULL, NULL, rockModel->positions.size());
+    //cowModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, NULL, NULL, cowModel->positions.size());
+    //dogModel->render(false, depthObjectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, NULL, NULL, dogModel->positions.size());
+}
+
 void lighting_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, W_WIDTH, W_HEIGHT);
@@ -198,11 +242,31 @@ void lighting_pass() {
 
     mat4 modelMatrix = mat4();
 
-    voxelModel->render(voxelShader, camera, modelMatrix, NULL, textureAtlas, light, GRID_SIZE * GRID_SIZE);
-    treeModel->render(objectShader, camera, modelMatrix, 1, textureAtlas, light, treeModel->positions.size());
-    rockModel->render(objectShader, camera, modelMatrix, 2, textureAtlas, light, rockModel->positions.size());
-    //cowModel->render(objectShader, camera, modelMatrix, 3, textureAtlas, light, cowModel->positions.size());
-    //dogModel->render(objectShader, camera, modelMatrix, 4, textureAtlas, light, dogModel->positions.size());
+    if (glfwGetKey(window, GLFW_KEY_F1) != GLFW_PRESS) {
+        voxelModel->render(true, voxelShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, NULL, textureAtlas, light, GRID_SIZE * GRID_SIZE);
+        treeModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
+        rockModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
+        //cowModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, textureAtlas, light, cowModel->positions.size());
+        //dogModel->render(true, objectShader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
+    }
+    else {
+        voxelModel->render(true, voxelShader, modelMatrix, light->viewMatrix, light->projectionMatrix, NULL, textureAtlas, light, GRID_SIZE * GRID_SIZE);
+        treeModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
+        rockModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
+        //cowModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, textureAtlas, light, cowModel->positions.size());
+        //dogModel->render(true, objectShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
+    }
+}
+
+void renderDepthMap() {
+    glUseProgram(depthMapShader->program);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, light->depthTexture);
+    glUniform1i(depthMapShader->texture, 1);
+
+    depthMap->bind();
+    depthMap->draw();
 }
 
 void mainLoop() {
@@ -215,7 +279,11 @@ void mainLoop() {
         camera->update(getColumnHighestBlock(thisx, thisz), frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed);
         light->update();
 
+        cout << "Light (" << (int)light->lightPosition_worldspace.x << ", " << (int)light->lightPosition_worldspace.y << ", " << (int)light->lightPosition_worldspace.z << ")" << endl;
+
+        depth_pass();
         lighting_pass();
+        //renderDepthMap();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -296,6 +364,9 @@ void free() {
 
     glDeleteProgram(voxelShader->program);
     glDeleteProgram(objectShader->program);
+    glDeleteProgram(depthVoxelShader->program);
+    glDeleteProgram(depthObjectShader->program);
+    glDeleteProgram(depthMapShader->program);
 
     glfwTerminate();
 }
@@ -332,7 +403,7 @@ Camera* setCameraLocation(float x, float z) {
         vec3(x, getColumnHighestBlock(x_quantized, z_quantized) + 1.2, -z),
         0, - 3.14f / 16.0f,
         voxelModel->heightMap,
-        false
+        true
     );
 }
 

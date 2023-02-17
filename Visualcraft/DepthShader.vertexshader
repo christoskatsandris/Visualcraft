@@ -1,0 +1,25 @@
+#version 330 core
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec3 vertexPosition_modelspace;
+layout(location = 3) in vec3 voxelPositions;
+layout(location = 4) in float heightMap;
+
+// Values that stay constant for the whole mesh.
+uniform mat4 M;
+uniform mat4 V;
+uniform mat4 P;
+
+void main()
+{
+	vec4 vertex_position_worldspace = M * vec4(vertexPosition_modelspace, 1.0);
+
+	vertex_position_worldspace += vec4(
+		voxelPositions.x,
+		-voxelPositions.y - heightMap,
+		-voxelPositions.z,
+		0.0
+	);
+
+    gl_Position =  P * V * vertex_position_worldspace;
+}

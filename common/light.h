@@ -15,33 +15,33 @@ public:
     glm::mat4 projectionMatrix;
 
     glm::vec3 lightPosition_worldspace;
+    float rho, phiAngle, thetaAngle;
 
     glm::vec4 La, Ld, Ls;
 
     float power;
 
     float nearPlane, farPlane;
-
-    float rho, phiAngle, thetaAngle;
-
     bool orthoProj;
 
     float lightSpeed;
     glm::vec3 direction;
 
+    GLuint depthFramebuffer;
+    GLuint depthTexture;
+
     // Where the light will look at
     glm::vec3 targetPosition;
 
     // Constructor with cartesian coordinates
-    Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::vec3 position, float power);
+    Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::vec3 position, float power, int SHADOW_WIDTH, int SHADOW_HEIGHT);
 
     // Constructor with spherical coordinates
-    Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float rho, float phi, float theta, float power);
+    Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float rho, float phi, float theta, float power, int SHADOW_WIDTH, int SHADOW_HEIGHT);
 
+    void initialize(int SHADOW_WIDTH, int SHADOW_HEIGHT);
     void update();
     void uploadToShader(GLuint LaLocation, GLuint LdLocation, GLuint LsLocation, GLuint positionLocation, GLuint powerLocation);
-
-    glm::mat4 lightVP();
 };
 
 #endif

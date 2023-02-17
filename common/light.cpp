@@ -1,5 +1,6 @@
 #include "light.h"
 
+#include <iostream>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glfw3.h>
@@ -7,46 +8,60 @@
 
 using namespace glm;
 
-Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::vec3 position, float power)
+Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, glm::vec3 position, float power, int SHADOW_WIDTH, int SHADOW_HEIGHT)
     : window(window), La(La), Ld(Ld), Ls(Ls), lightPosition_worldspace(position), power(power)
 {
-    // setting near and far plane affects the detail of the shadow
-    nearPlane = 1.0;
-    farPlane = 30.0;
-
     rho = sqrt(pow(lightPosition_worldspace.x, 2) + pow(lightPosition_worldspace.y, 2) + pow(lightPosition_worldspace.z, 2));
     phiAngle = -acos(lightPosition_worldspace.z / rho);
     thetaAngle = atan(lightPosition_worldspace.y / lightPosition_worldspace.x);
 
-    direction = normalize(targetPosition - lightPosition_worldspace);
-
-    lightSpeed = 0.1f;
-    targetPosition = glm::vec3(0.0, 0.0, 0.0);
-
-    projectionMatrix = ortho(-10.0f, 10.0f, -10.0f, 10.0f, nearPlane, farPlane);
-    orthoProj = true;
+    initialize(SHADOW_WIDTH, SHADOW_HEIGHT);
 }
 
-Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float rho, float phi, float theta, float power)
+Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float rho, float phi, float theta, float power, int SHADOW_WIDTH, int SHADOW_HEIGHT)
     : window(window), La(La), Ld(Ld), Ls(Ls), rho(rho), phiAngle(phi), thetaAngle(theta), power(power)
 {
-    // setting near and far plane affects the detail of the shadow
-    nearPlane = 1.0;
-    farPlane = 30.0;
-
     lightPosition_worldspace = vec3(
         rho * sin(phi) * cos(theta),
         rho * sin(phi) * sin(theta),
         rho * cos(phi)
     );
     
+    initialize(SHADOW_WIDTH, SHADOW_HEIGHT);
+}
+
+void Light::initialize(int SHADOW_WIDTH, int SHADOW_HEIGHT) {
+    // setting near and far plane affects the detail of the shadow
+    nearPlane = 1.0;
+    farPlane = 30000.0;
+
     direction = normalize(targetPosition - lightPosition_worldspace);
 
     lightSpeed = 0.1f;
     targetPosition = glm::vec3(0.0, 0.0, 0.0);
 
-    projectionMatrix = ortho(-10.0f, 10.0f, -10.0f, 10.0f, nearPlane, farPlane);
+    projectionMatrix = ortho(-10000.0f, 10000.0f, -10000.0f, 10000.0f, nearPlane, farPlane);
     orthoProj = true;
+
+    glGenFramebuffers(1, &depthFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthFramebuffer);
+
+    glGenTextures(1, &depthTexture);
+    glBindTexture(GL_TEXTURE_2D, depthTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0,
+        GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);							// Task 4.5 Texture wrapping methods
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);							// GL_REPEAT, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_BORDER
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        glfwTerminate();
+        throw std::runtime_error("Frame buffer not initialized correctly");
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Light::update() {
@@ -72,7 +87,7 @@ void Light::update() {
     //    lightPosition_worldspace -= lightSpeed * vec3(0.0, 1.0, 0.0);
     //}
 
-    phiAngle += 0.0005f;
+    phiAngle += 0.004f;
     if (phiAngle >= 2 * 3.14f) phiAngle = 0;
 
     // Update sky color to match daylight
@@ -130,8 +145,4 @@ void Light::uploadToShader(GLuint LaLocation, GLuint LdLocation, GLuint LsLocati
     glUniform4f(LsLocation, Ls.r, Ls.g, Ls.b, Ls.a);
     glUniform3f(positionLocation, lightPosition_worldspace.x, lightPosition_worldspace.y, lightPosition_worldspace.z);
     glUniform1f(powerLocation, power);
-}
-
-mat4 Light::lightVP() {
-    return projectionMatrix * viewMatrix;
 }

@@ -13,11 +13,13 @@ out vec3 vertex_position_cameraspace;
 out vec3 vertex_normal_cameraspace;
 out vec2 vertex_UV;
 out float heightmap;
+out vec4 vertex_position_lightspace;
 
 // model view projection matrix
 uniform mat4 M;
 uniform mat4 V;
 uniform mat4 P;
+uniform mat4 lightVP;
 
 void main()
 {
@@ -36,5 +38,6 @@ void main()
 	vertex_normal_cameraspace = (V * M * vec4(vertexNormal_modelspace, 0)).xyz;
 	vertex_UV = vertexUV;
 	heightmap = heightMap;
+	vertex_position_lightspace = lightVP * vertex_position_worldspace;
 	gl_Position = P * V * vertex_position_worldspace;
 }
