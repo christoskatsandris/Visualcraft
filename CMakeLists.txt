@@ -127,8 +127,12 @@ add_executable(Visualcraft
   common/util.h
   common/util.cpp
 
-  Visualcraft/Object.fragmentshader
-  Visualcraft/Object.vertexshader
+  Visualcraft/DepthMap.fragmentshader
+  Visualcraft/DepthMap.vertexshader
+  Visualcraft/DepthShader.fragmentshader
+  Visualcraft/DepthShader.vertexshader
+  Visualcraft/Lamp.fragmentshader
+  Visualcraft/Lamp.vertexshader
   Visualcraft/Shader.fragmentshader
   Visualcraft/Shader.vertexshader
 )

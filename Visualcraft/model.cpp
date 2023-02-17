@@ -59,51 +59,32 @@ void Model::bind() {
     glBindVertexArray(modelVAO);
 }
 
-void Model::render(Program* shader, Camera* camera, mat4 modelMatrix, int objectID, GLuint textureAtlas, Light* light, int count) {
+void Model::render(bool renderLight, Program* shader, mat4 modelMatrix, mat4 viewMatrix, mat4 projectionMatrix, int objectID, GLuint textureAtlas, Light* light, int count) {
     glUseProgram(shader->program);
     this->bind();
 
-    glUniformMatrix4fv(shader->P, 1, GL_FALSE, &camera->projectionMatrix[0][0]);
-    glUniformMatrix4fv(shader->V, 1, GL_FALSE, &camera->viewMatrix[0][0]);
+    glUniformMatrix4fv(shader->P, 1, GL_FALSE, &projectionMatrix[0][0]);
+    glUniformMatrix4fv(shader->V, 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(shader->M, 1, GL_FALSE, &modelMatrix[0][0]);
+    glUniform1i(shader->objectID, objectID);
 
-    light->uploadToShader(shader->La, shader->Ld, shader->Ls, shader->lightPosition, shader->lightPower);
+    if (renderLight) {
+        light->uploadToShader(((LightProgram*)shader)->La, ((LightProgram*)shader)->Ld, ((LightProgram*)shader)->Ls, ((LightProgram*)shader)->lightPosition, ((LightProgram*)shader)->lightPower);
 
-    if (objectID != NULL) {
-        glUniform1i(shader->objectID, objectID);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, textureAtlas);
+        glUniform1i(((LightProgram*)shader)->textureAtlas, 0);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, light->depthTexture);
+        glUniform1i(((LightProgram*)shader)->depthMap, 1);
+
+        mat4 lightVP = light->projectionMatrix * light->viewMatrix;
+        glUniformMatrix4fv(((LightProgram*)shader)->lightVP, 1, GL_FALSE, &lightVP[0][0]);
     }
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureAtlas);
-    glUniform1i(shader->textureAtlas, 0);
-
     glDrawArraysInstanced(GL_TRIANGLES, 0, this->vertices.size(), count);
-
 }
-
-//void Model::render(GLuint program, GLuint projectionMatrixLocation, GLuint viewMatrixLocation, GLuint modelMatrixLocation, glm::mat4 projectionMatrix, glm::mat4 viewMatrix, glm::mat4 modelMatrix,
-//    int id, GLuint objectIDLocation, GLuint textureAtlas, GLuint textureAtlasSampler, Light* light, GLuint LaLocation, GLuint LdLocation, GLuint LsLocation, GLuint lightPositionLocation, GLuint lightPowerLocation, int count
-//) {
-//    glUseProgram(program);
-//    this->bind();
-//
-//    glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
-//    glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
-//    glUniformMatrix4fv(modelMatrixLocation, 1, GL_FALSE, &modelMatrix[0][0]);
-//
-//    light->uploadToShader(LaLocation, LdLocation, LsLocation, lightPositionLocation, lightPowerLocation);
-//
-//    if (id != NULL) {
-//        glUniform1i(objectIDLocation, id);
-//    }
-//
-//    glActiveTexture(GL_TEXTURE0);
-//    glBindTexture(GL_TEXTURE_2D, textureAtlas);
-//    glUniform1i(textureAtlasSampler, 0);
-//
-//    glDrawArraysInstanced(GL_TRIANGLES, 0, this->vertices.size(), count);
-//
-//}
 
 Model::~Model() {
     glDeleteBuffers(1, &modelVerticesVBO);
