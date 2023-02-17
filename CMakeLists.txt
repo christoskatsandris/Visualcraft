@@ -131,8 +131,6 @@ add_executable(Visualcraft
   Visualcraft/DepthMap.vertexshader
   Visualcraft/DepthShader.fragmentshader
   Visualcraft/DepthShader.vertexshader
-  Visualcraft/Lamp.fragmentshader
-  Visualcraft/Lamp.vertexshader
   Visualcraft/Shader.fragmentshader
   Visualcraft/Shader.vertexshader
 )
