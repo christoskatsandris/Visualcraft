@@ -78,8 +78,8 @@ GLuint textureAtlas;
 
 void prepareShaders() {
     // Create programs
-    shader = new LightProgram("Shader", true);
-    depthShader = new DepthProgram("DepthShader", true);
+    shader = new LightProgram("Shader");
+    depthShader = new DepthProgram("DepthShader");
     depthMapShader = new DepthMapProgram("DepthMap");
 
     // Load texture maps

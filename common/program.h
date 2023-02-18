@@ -16,12 +16,12 @@ public:
 	GLuint M, V, P;
 	GLuint objectID;
 
-	Program(std::string name, bool isObject);
+	Program(std::string name);
 };
 
 class DepthProgram : public Program {
 public:
-	DepthProgram(std::string name, bool isObject);
+	DepthProgram(std::string name);
 };
 
 class LightProgram : public Program {
@@ -32,7 +32,7 @@ public:
 	GLuint depthMap;
 	GLuint lightVP;
 
-	LightProgram(std::string name, bool isObject);
+	LightProgram(std::string name);
 };
 
 class DepthMapProgram : public BaseProgram {

@@ -8,29 +8,24 @@ BaseProgram::BaseProgram(string name) {
 	program = loadShaders((name + ".vertexshader").c_str(), (name + ".fragmentshader").c_str());
 }
 
-Program::Program(string name, bool isObject)
+Program::Program(string name)
 	: BaseProgram(name)
 {
 	M = glGetUniformLocation(program, "M");
 	V = glGetUniformLocation(program, "V");
 	P = glGetUniformLocation(program, "P");
 
-	if (isObject) {
-		objectID = glGetUniformLocation(program, "objectID");
-	}
-	else {
-		objectID = NULL;
-	}
+	objectID = glGetUniformLocation(program, "objectID");
 }
 
-DepthProgram::DepthProgram(string name, bool isObject)
-	: Program(name, isObject) 
+DepthProgram::DepthProgram(string name)
+	: Program(name) 
 {
 
 }
 
-LightProgram::LightProgram(string name, bool isObject)
-	: Program(name, isObject)
+LightProgram::LightProgram(string name)
+	: Program(name)
 {
 	La = glGetUniformLocation(program, "light.La");
 	Ld = glGetUniformLocation(program, "light.Ld");
