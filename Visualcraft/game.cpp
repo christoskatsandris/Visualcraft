@@ -41,7 +41,6 @@ void determineNeighbors();
 void createContext();
 void depth_pass();
 void lighting_pass();
-void renderDepthMap();
 void mainLoop();
 void free();
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -62,10 +61,8 @@ void allowCameraMove(int thisx, int thisz, bool* out_front, bool* out_back, bool
 // Global variables
 GLFWwindow* window;
 Program* shader, * depthShader;
-DepthMapProgram* depthMapShader;
 Camera* camera;
 Light* light;
-Drawable* depthMap;
 
 // Object models
 Voxel* voxelModel;
@@ -80,7 +77,6 @@ void prepareShaders() {
     // Create programs
     shader = new LightProgram("Shader");
     depthShader = new DepthProgram("DepthShader");
-    depthMapShader = new DepthMapProgram("DepthMap");
 
     // Load texture maps
     textureAtlas = loadSOIL("../assets/textures/block/texture_atlas.png");
@@ -115,26 +111,6 @@ void createModels() {
     //calculateCowPositions();
     //calculateDogPositions();
     //determineNeighbors();
-
-    vector<vec3> quadVertices = {
-        vec3(0.5, 0.5, 0.0),
-        vec3(1.0, 0.5, 0.0),
-        vec3(1.0, 1.0, 0.0),
-        vec3(1.0, 1.0, 0.0),
-        vec3(0.5, 1.0, 0.0),
-        vec3(0.5, 0.5, 0.0)
-    };
-
-    vector<vec2> quadUVs = {
-        vec2(0.0, 0.0),
-        vec2(1.0, 0.0),
-        vec2(1.0, 1.0),
-        vec2(1.0, 1.0),
-        vec2(0.0, 1.0),
-        vec2(0.0, 0.0)
-    };
-
-    depthMap = new Drawable(quadVertices, quadUVs);
 }
 
 void calculateVoxelPositions() {
@@ -247,17 +223,6 @@ void lighting_pass() {
     //dogModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
 }
 
-void renderDepthMap() {
-    glUseProgram(depthMapShader->program);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, light->depthTexture);
-    glUniform1i(depthMapShader->texture, 1);
-
-    depthMap->bind();
-    depthMap->draw();
-}
-
 void mainLoop() {
     bool frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed;
     do {
@@ -270,7 +235,6 @@ void mainLoop() {
 
         depth_pass();
         lighting_pass();
-        //renderDepthMap();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -351,7 +315,6 @@ void free() {
     
     glDeleteProgram(shader->program);
     glDeleteProgram(depthShader->program);
-    glDeleteProgram(depthMapShader->program);
 
     glfwTerminate();
 }

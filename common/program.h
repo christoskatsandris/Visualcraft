@@ -35,11 +35,4 @@ public:
 	LightProgram(std::string name);
 };
 
-class DepthMapProgram : public BaseProgram {
-public:
-	GLuint texture;
-
-	DepthMapProgram(std::string name);
-};
-
 #endif

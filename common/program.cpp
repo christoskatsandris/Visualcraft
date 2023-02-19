@@ -38,9 +38,3 @@ LightProgram::LightProgram(string name)
 	lightVP = glGetUniformLocation(program, "lightVP");
 	depthMap = glGetUniformLocation(program, "shadowMapSampler");
 }
-
-DepthMapProgram::DepthMapProgram(string name)
-	: BaseProgram(name)
-{
-	texture = glGetUniformLocation(program, "textureSampler");
-}
