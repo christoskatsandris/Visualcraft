@@ -91,7 +91,7 @@ void prepareShaders() {
     // Create light
     // Cartesian coordinates (x,y,z) = (-GRID_SIZE, 3000, -GRID_SIZE)
     // Spherical coordinates (rho, phi, theta) = (3159.11, 1.79423, 1.34156)
-    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, 3159.11f, 1.79423f, 1.34156f, 10000000.0f, SHADOW_WIDTH, SHADOW_HEIGHT);
+    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, 100.0f, 1.79423f, 1.34156f, 10000.0f, SHADOW_WIDTH, SHADOW_HEIGHT);
 }
 
 void createModels() {
@@ -239,7 +239,7 @@ void lighting_pass() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     mat4 modelMatrix = mat4();
-    
+
     voxelModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 0, textureAtlas, light, GRID_SIZE * GRID_SIZE);
     treeModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
     rockModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
@@ -266,7 +266,7 @@ void mainLoop() {
         getBlockPositionFromCoordinates(camera->position.x, camera->position.z, &thisx, &thisz);
         allowCameraMove(thisx, thisz, &frontMoveAllowed, &backMoveAllowed, &rightMoveAllowed, &leftMoveAllowed, &jumpAllowed);
         camera->update(getColumnHighestBlock(thisx, thisz), frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed);
-        light->update();
+        light->update(camera->position);
 
         depth_pass();
         lighting_pass();

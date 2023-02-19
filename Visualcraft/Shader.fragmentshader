@@ -41,23 +41,24 @@ float ShadowCalculation() {
 
     // If the currentDepth is larger than the closestDepth, the fragment is shadowed
     // Correcting the quantization problem
-    shadow = closestDepth + 0.005 > currentDepth ? 0.0f : 1.0f;
+	float bias = 0.0003f;
+    shadow = closestDepth + bias > currentDepth ? 0.0f : 1.0f;
 
     // Make the shadow edges more realistic
-    //shadow = 0.0;
-    //vec2 depthMap_dimensions = textureSize(shadowMapSampler, 0);
-    //vec2 texelSize = 1.0 / depthMap_dimensions;
-    //for(int x = -1; x <= 1; x++ ){
-    //    for(int y = -1; y <= 1; y++ ){
-    //        float pcfDepth = texture(shadowMapSampler, projCoords.xy + vec2(x, y) * texelSize).r;
-    //        shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0; 
-    //    }
-    //}
-    //shadow /= 9.0;
-    //
-    //
-    //if(projCoords.z > 1.0)
-    //    shadow = 0.0;
+    shadow = 0.0;
+    vec2 depthMap_dimensions = textureSize(shadowMapSampler, 0);
+    vec2 texelSize = 1.0 / depthMap_dimensions;
+    for(int x = -1; x <= 1; x++ ){
+        for(int y = -1; y <= 1; y++ ){
+            float pcfDepth = texture(shadowMapSampler, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0; 
+        }
+    }
+    shadow /= 9.0;
+    
+    
+    if(projCoords.z > 1.0)
+        shadow = 0.0;
 
     return shadow;
 }

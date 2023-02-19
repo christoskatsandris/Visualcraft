@@ -40,7 +40,7 @@ public:
     Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float rho, float phi, float theta, float power, int SHADOW_WIDTH, int SHADOW_HEIGHT);
 
     void initialize(int SHADOW_WIDTH, int SHADOW_HEIGHT);
-    void update();
+    void update(glm::vec3 cameraPosition);
     void uploadToShader(GLuint LaLocation, GLuint LdLocation, GLuint LsLocation, GLuint positionLocation, GLuint powerLocation);
 };
 

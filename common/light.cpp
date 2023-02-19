@@ -33,14 +33,14 @@ Light::Light(GLFWwindow* window, glm::vec4 La, glm::vec4 Ld, glm::vec4 Ls, float
 void Light::initialize(int SHADOW_WIDTH, int SHADOW_HEIGHT) {
     // setting near and far plane affects the detail of the shadow
     nearPlane = 1.0;
-    farPlane = 30000.0;
+    farPlane = 3000.0;
 
     direction = normalize(targetPosition - lightPosition_worldspace);
 
     lightSpeed = 0.1f;
     targetPosition = glm::vec3(0.0, 0.0, 0.0);
 
-    projectionMatrix = ortho(-10000.0f, 10000.0f, -10000.0f, 10000.0f, nearPlane, farPlane);
+    projectionMatrix = ortho(-100.0f, 100.0f, -100.0f, 100.0f, nearPlane, farPlane);
     orthoProj = true;
 
     glGenFramebuffers(1, &depthFramebuffer);
@@ -64,7 +64,7 @@ void Light::initialize(int SHADOW_WIDTH, int SHADOW_HEIGHT) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Light::update() {
+void Light::update(vec3 cameraPosition) {
     //// Move across z-axis
     //if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
     //    lightPosition_worldspace += lightSpeed * vec3(0.0, 0.0, 1.0);
@@ -87,22 +87,30 @@ void Light::update() {
     //    lightPosition_worldspace -= lightSpeed * vec3(0.0, 1.0, 0.0);
     //}
 
-    phiAngle += 0.004f;
+    phiAngle += 0.0005f;
     if (phiAngle >= 2 * 3.14f) phiAngle = 0;
-
-    // Update sky color to match daylight
-    if (lightPosition_worldspace.x > 110) {
-        glClearColor(0.53f * (lightPosition_worldspace.x / 700), 0.81f * (lightPosition_worldspace.x / 700), 0.92f * (lightPosition_worldspace.x / 700), 0.5f);
-    }
-    else {
-        glClearColor(0.53f * (110.0f / 700.0f), 0.81f * (110.0f / 700.0f), 0.92f * (110.0f / 700.0f), 0.5f);
-    }
 
     lightPosition_worldspace = vec3(
         rho * sin(phiAngle) * cos(thetaAngle),
         rho * sin(phiAngle) * sin(thetaAngle),
         rho * cos(phiAngle)
     );
+
+    lightPosition_worldspace += vec3(
+        cameraPosition.x,
+        0,
+        cameraPosition.z
+    );
+
+    float absolute_light_x = lightPosition_worldspace.x - cameraPosition.x;
+
+    // Update sky color to match daylight
+    if (absolute_light_x > 4) {
+        glClearColor(0.53f * (absolute_light_x / 22.0f), 0.81f * (absolute_light_x / 22.0f), 0.92f * (absolute_light_x / 22.0f), 0.5f);
+    }
+    else {
+        glClearColor(0.53f * (4.0f / 22.0f), 0.81f * (4.0f / 22.0f), 0.92f * (4.0f / 22.0f), 0.5f);
+    }
 
     // We have the direction of the light and the point where the light is looking at
     // We will use this information to calculate the "up" vector, 
