@@ -11,7 +11,9 @@
 
 // Include utilities
 #include <common/camera.h>
+#include <common/light.h>
 #include <common/model.h>
+#include <common/program.h>
 #include <common/PerlinNoise.h>
 #include <common/shader.h>
 #include <common/texture.h>
@@ -37,6 +39,8 @@ void calculateRockPositions();
 //void calculateDogPositions();
 void determineNeighbors();
 void createContext();
+void depth_pass();
+void lighting_pass();
 void mainLoop();
 void free();
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -49,13 +53,16 @@ void allowCameraMove(int thisx, int thisz, bool* out_front, bool* out_back, bool
 // Global definitions
 #define W_WIDTH 1024
 #define W_HEIGHT 768
+#define SHADOW_WIDTH 1024
+#define SHADOW_HEIGHT 1024
 #define W_TITLE "Visualcraft"
 #define GRID_SIZE 700
 
 // Global variables
 GLFWwindow* window;
-GLuint shaderProgram, objectProgram;
+Program* shader, * depthShader;
 Camera* camera;
+Light* light;
 
 // Object models
 Voxel* voxelModel;
@@ -63,35 +70,24 @@ Voxel* voxelModel;
 Object* treeModel, * rockModel;
 //Animal* cowModel, * dogModel;
 
-// GLSL variables: Uniform variable locations
-GLuint modelMatrixLocation, viewMatrixLocation, projectionMatrixLocation;
-GLuint objectIDLocation;
-
-// GLSL variables: Textures and samplers
+// GLSL variables: Textures
 GLuint textureAtlas;
-GLuint shaderTextureAtlasSampler, objectTextureAtlasSampler;
 
 void prepareShaders() {
-    // Create and compile our GLSL program from the shaders
-    shaderProgram = loadShaders("Shader.vertexshader", "Shader.fragmentshader");
-    objectProgram = loadShaders("Object.vertexshader", "Object.fragmentshader");
+    // Create programs
+    shader = new LightProgram("Shader");
+    depthShader = new DepthProgram("DepthShader");
 
     // Load texture maps
     textureAtlas = loadSOIL("../assets/textures/block/texture_atlas.png");
 
-    // Get a pointer to the texture samplers
-    shaderTextureAtlasSampler = glGetUniformLocation(shaderProgram, "textureAtlasSampler");
-    objectTextureAtlasSampler = glGetUniformLocation(objectProgram, "textureAtlasSampler");
-
-    // Get a pointer location to model matrix in the vertex shader
-    modelMatrixLocation = glGetUniformLocation(shaderProgram, "M");
-    viewMatrixLocation = glGetUniformLocation(shaderProgram, "V");
-    projectionMatrixLocation = glGetUniformLocation(shaderProgram, "P");
-
-    objectIDLocation = glGetUniformLocation(objectProgram, "objectID");
-
     // Draw wire frame triangles or fill: GL_LINE or GL_FILL
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Create light
+    // Cartesian coordinates (x,y,z) = (-GRID_SIZE, 3000, -GRID_SIZE)
+    // Spherical coordinates (rho, phi, theta) = (3159.11, 1.79423, 1.34156)
+    light = new Light(window, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, vec4{ 1,1,1,1 }, 100.0f, 1.79423f, 1.34156f, 10000.0f, SHADOW_WIDTH, SHADOW_HEIGHT);
 }
 
 void createModels() {
@@ -104,8 +100,11 @@ void createModels() {
     //cowModel = new Animal();
     //cout << endl << "========= Dog  =========" << endl;
     //dogModel = new Animal();
+
     voxelModel->heightMap = createPerlinNoise(GRID_SIZE, GRID_SIZE, GRID_SIZE);
+
     camera = setCameraLocation(0, 0);
+
     calculateVoxelPositions();
     calculateTreePositions();
     calculateRockPositions();
@@ -196,30 +195,47 @@ void createContext() {
     //dogModel->createContext(dogModel->positions, dogModel->heightMap);
 }
 
+void depth_pass() {
+    glBindFramebuffer(GL_FRAMEBUFFER, light->depthFramebuffer);
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    mat4 modelMatrix = mat4();
+
+    voxelModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 0, NULL, NULL, GRID_SIZE * GRID_SIZE);
+    treeModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, NULL, NULL, treeModel->positions.size());
+    rockModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, NULL, NULL, rockModel->positions.size());
+    //cowModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, NULL, NULL, cowModel->positions.size());
+    //dogModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, NULL, NULL, dogModel->positions.size());
+}
+
+void lighting_pass() {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, W_WIDTH, W_HEIGHT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    mat4 modelMatrix = mat4();
+
+    voxelModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 0, textureAtlas, light, GRID_SIZE * GRID_SIZE);
+    treeModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
+    rockModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
+    //cowModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, textureAtlas, light, cowModel->positions.size());
+    //dogModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
+}
+
 void mainLoop() {
     bool frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed;
     do {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glUseProgram(shaderProgram);
-
-        // Camera
+        // Update camera and terrain properties
         int thisx, thisz;
         getBlockPositionFromCoordinates(camera->position.x, camera->position.z, &thisx, &thisz);
-
         allowCameraMove(thisx, thisz, &frontMoveAllowed, &backMoveAllowed, &rightMoveAllowed, &leftMoveAllowed, &jumpAllowed);
         camera->update(getColumnHighestBlock(thisx, thisz), frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed);
+        light->update(camera->position);
 
-        mat4 projectionMatrix = camera->projectionMatrix;
-        mat4 viewMatrix = camera->viewMatrix;
-        mat4 modelMatrix = mat4();
+        depth_pass();
+        lighting_pass();
 
-        // Render world
-        voxelModel->render(shaderProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, NULL, NULL, textureAtlas, shaderTextureAtlasSampler, GRID_SIZE * GRID_SIZE);
-        treeModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 1, objectIDLocation, textureAtlas, objectTextureAtlasSampler, treeModel->positions.size());
-        rockModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 2, objectIDLocation, textureAtlas, objectTextureAtlasSampler, rockModel->positions.size());
-        //cowModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 3, objectIDLocation, textureAtlas, objectTextureAtlasSampler, cowModel->positions.size());
-        //dogModel->render(objectProgram, projectionMatrixLocation, viewMatrixLocation, modelMatrixLocation, projectionMatrix, viewMatrix, modelMatrix, 4, objectIDLocation, textureAtlas, objectTextureAtlasSampler, dogModel->positions.size());
-        
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -296,9 +312,10 @@ void free() {
     delete voxelModel, treeModel, rockModel;// , cowModel, dogModel;
 
     glDeleteTextures(1, &textureAtlas);
+    
+    glDeleteProgram(shader->program);
+    glDeleteProgram(depthShader->program);
 
-    glDeleteProgram(shaderProgram);
-    glDeleteProgram(objectProgram);
     glfwTerminate();
 }
 

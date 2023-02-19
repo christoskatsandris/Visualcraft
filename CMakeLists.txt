@@ -112,10 +112,14 @@ add_executable(Visualcraft
 
   common/camera.h
   common/camera.cpp
+  common/light.h
+  common/light.cpp
   common/model.h
   common/model.cpp
   common/PerlinNoise.h
   common/PerlinNoise.cpp
+  common/program.h
+  common/program.cpp
   common/shader.h
   common/shader.cpp
   common/texture.h
@@ -123,8 +127,8 @@ add_executable(Visualcraft
   common/util.h
   common/util.cpp
 
-  Visualcraft/Object.fragmentshader
-  Visualcraft/Object.vertexshader
+  Visualcraft/DepthShader.fragmentshader
+  Visualcraft/DepthShader.vertexshader
   Visualcraft/Shader.fragmentshader
   Visualcraft/Shader.vertexshader
 )

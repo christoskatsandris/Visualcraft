@@ -95,7 +95,7 @@ void Camera::update(float columnHighestBlock, bool frontMoveAllowed, bool backMo
             float coeff = 1 - 0.03f * jumpSteps;
             position += vec3(0, 1, 0) * deltaTime * coeff * speed;
             jumpSteps++;
-            if (jumpSteps == 20) {
+            if (jumpSteps == 10) {
                 jump = false;
                 jumpSteps = 0;
             }
