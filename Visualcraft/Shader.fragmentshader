@@ -15,12 +15,15 @@ in vec3 vertex_normal_cameraspace;
 in vec2 vertex_UV;
 in float heightmap;
 in vec4 vertex_position_lightspace;
+flat in int instanceID;
+
 out vec4 color;
 
 uniform mat4 V;
 uniform sampler2D textureAtlasSampler;
 uniform sampler2D shadowMapSampler;
 uniform int objectID;
+uniform int rayCastedID;
 uniform Light light;
 
 float ShadowCalculation() {
@@ -133,6 +136,50 @@ vec4 chooseTexture() {
 			        chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.0f)); // grassBlockSide
 		        }
 	        }
+
+			// If ray casted, draw black border.
+			if (rayCastedID == instanceID) {
+				if (
+					// Bottom face
+					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.x < -0.49 ||
+					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.x > 0.49 ||
+					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.z < -0.49 ||
+					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.z > 0.49 ||
+
+					// Top face
+					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.x < -0.49 ||
+					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.x > 0.49 ||
+					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.z < -0.49 ||
+					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.z > 0.49 ||
+
+					// Front face
+					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.x < -0.49 ||
+					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.x > 0.49 ||
+					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.y < -0.49 ||
+					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.y > 0.49 ||
+
+					// Back face
+					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.x < -0.49 ||
+					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.x > 0.49 ||
+					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.y < -0.49 ||
+					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.y > 0.49 ||
+
+					// Right face
+					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.y < -0.49 ||
+					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.y > 0.49 ||
+					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.z < -0.49 ||
+					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.z > 0.49 ||
+
+					// Left face
+					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.y < -0.49 ||
+					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.y > 0.49 ||
+					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.z < -0.49 ||
+					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.z > 0.49
+				) {
+					chosenTexture = vec4(0,0,0,1);
+				}
+			}
+
 			break;
 
         case 1: // Tree

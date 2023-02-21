@@ -16,6 +16,7 @@ Program::Program(string name)
 	P = glGetUniformLocation(program, "P");
 
 	objectID = glGetUniformLocation(program, "objectID");
+	rayCastedID = glGetUniformLocation(program, "rayCastedID");
 }
 
 DepthProgram::DepthProgram(string name)

@@ -59,7 +59,7 @@ void Model::bind() {
     glBindVertexArray(modelVAO);
 }
 
-void Model::render(bool renderLight, Program* shader, mat4 modelMatrix, mat4 viewMatrix, mat4 projectionMatrix, int objectID, GLuint textureAtlas, Light* light, int count) {
+void Model::render(bool renderLight, Program* shader, mat4 modelMatrix, mat4 viewMatrix, mat4 projectionMatrix, int objectID, int rayCastedID, GLuint textureAtlas, Light* light, int count) {
     glUseProgram(shader->program);
     this->bind();
 
@@ -67,6 +67,7 @@ void Model::render(bool renderLight, Program* shader, mat4 modelMatrix, mat4 vie
     glUniformMatrix4fv(shader->V, 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(shader->M, 1, GL_FALSE, &modelMatrix[0][0]);
     glUniform1i(shader->objectID, objectID);
+    glUniform1i(shader->rayCastedID, rayCastedID);
 
     if (renderLight) {
         light->uploadToShader(((LightProgram*)shader)->La, ((LightProgram*)shader)->Ld, ((LightProgram*)shader)->Ls, ((LightProgram*)shader)->lightPosition, ((LightProgram*)shader)->lightPower);

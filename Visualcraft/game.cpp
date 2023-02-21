@@ -39,11 +39,13 @@ void calculateRockPositions();
 //void calculateDogPositions();
 void determineNeighbors();
 void createContext();
+bool rayCast(int* out_x, int* out_z);
 void depth_pass();
-void lighting_pass();
+void lighting_pass(int rayCastedID);
 void mainLoop();
 void free();
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void pollMouse(GLFWwindow* window, int button, int action, int mods);
 Camera* setCameraLocation(float x, float z);
 float getColumnHighestBlock(int x_quantized, int z_quantized);
 void getBlockPositionFromCoordinates(float x, float z, int* out_x, int* out_z);
@@ -72,6 +74,9 @@ Object* treeModel, * rockModel;
 
 // GLSL variables: Textures
 GLuint textureAtlas;
+
+bool buttonPressed = false;
+int buttonPressedTimes = 0;
 
 void prepareShaders() {
     // Create programs
@@ -195,6 +200,41 @@ void createContext() {
     //dogModel->createContext(dogModel->positions, dogModel->heightMap);
 }
 
+bool rayCast(int* out_x, int* out_z) {
+    int raycast_steps = 1;
+    bool voxelFound = false;
+    int x_quantized, z_quantized;    
+    float voxelHeight;
+
+    while (!voxelFound && raycast_steps < 10) {
+        vec3 point = camera->position + (raycast_steps++ * 0.5f) * camera->direction;
+        getBlockPositionFromCoordinates(point.x, point.z, &x_quantized, &z_quantized);
+        voxelHeight = voxelModel->heightMap[x_quantized * GRID_SIZE + z_quantized];
+        if (point.y < -voxelHeight + 0.5f && point.y > -voxelHeight - 0.5f) {
+            voxelFound = true;
+        }
+    }
+
+    if (buttonPressed) {
+        if (!voxelFound) {
+            buttonPressedTimes = 0;
+            buttonPressed = false;
+        }
+        else if (buttonPressedTimes++ >= 10) {
+            voxelModel->heightMap[x_quantized * GRID_SIZE + z_quantized]++;
+            voxelModel->createContext(voxelModel->positions, voxelModel->heightMap);
+            buttonPressedTimes = 0;
+            buttonPressed = false;
+        }
+    }
+
+    if (voxelFound) {
+        *out_x = x_quantized;
+        *out_z = z_quantized;
+    }
+    return voxelFound;
+}
+
 void depth_pass() {
     glBindFramebuffer(GL_FRAMEBUFFER, light->depthFramebuffer);
     glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
@@ -202,25 +242,25 @@ void depth_pass() {
 
     mat4 modelMatrix = mat4();
 
-    voxelModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 0, NULL, NULL, GRID_SIZE * GRID_SIZE);
-    treeModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, NULL, NULL, treeModel->positions.size());
-    rockModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, NULL, NULL, rockModel->positions.size());
-    //cowModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, NULL, NULL, cowModel->positions.size());
-    //dogModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, NULL, NULL, dogModel->positions.size());
+    voxelModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 0, -1, NULL, NULL, GRID_SIZE * GRID_SIZE);
+    treeModel ->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, -1, NULL, NULL, treeModel->positions.size());
+    rockModel ->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, -1, NULL, NULL, rockModel->positions.size());
+    //cowModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, -1, NULL, NULL, cowModel->positions.size());
+    //dogModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, -1, NULL, NULL, dogModel->positions.size());
 }
 
-void lighting_pass() {
+void lighting_pass(int rayCastedID) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, W_WIDTH, W_HEIGHT);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     mat4 modelMatrix = mat4();
 
-    voxelModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 0, textureAtlas, light, GRID_SIZE * GRID_SIZE);
-    treeModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, textureAtlas, light, treeModel->positions.size());
-    rockModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, textureAtlas, light, rockModel->positions.size());
-    //cowModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, textureAtlas, light, cowModel->positions.size());
-    //dogModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, textureAtlas, light, dogModel->positions.size());
+    voxelModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 0, rayCastedID, textureAtlas, light, GRID_SIZE * GRID_SIZE);
+    treeModel ->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, rayCastedID, textureAtlas, light, treeModel->positions.size());
+    rockModel ->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, rayCastedID, textureAtlas, light, rockModel->positions.size());
+    //cowModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, rayCastedID, textureAtlas, light, cowModel->positions.size());
+    //dogModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, rayCastedID, textureAtlas, light, dogModel->positions.size());
 }
 
 void mainLoop() {
@@ -233,8 +273,17 @@ void mainLoop() {
         camera->update(getColumnHighestBlock(thisx, thisz), frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed);
         light->update(camera->position);
 
+        int rayCastedx, rayCastedz;
+        bool somethingCasted = rayCast(&rayCastedx, &rayCastedz);
+
         depth_pass();
-        lighting_pass();
+
+        if (somethingCasted) {
+            lighting_pass(rayCastedx * GRID_SIZE + rayCastedz);
+        }
+        else {
+            lighting_pass(-1);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -289,6 +338,7 @@ void initialize() {
     glClearColor(0.53f, 0.81f, 0.92f, 0.5f);
 
     //glfwSetKeyCallback(window, pollKeyboard);
+    glfwSetMouseButtonCallback(window, pollMouse);
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
@@ -341,6 +391,15 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+}
+
+void pollMouse(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        buttonPressed = true;
+    }
+    else {
+        buttonPressed = false;
+    }
 }
 
 Camera* setCameraLocation(float x, float z) {

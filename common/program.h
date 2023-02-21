@@ -15,6 +15,7 @@ class Program : public BaseProgram {
 public:
 	GLuint M, V, P;
 	GLuint objectID;
+	GLuint rayCastedID;
 
 	Program(std::string name);
 };
