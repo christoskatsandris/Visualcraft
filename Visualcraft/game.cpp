@@ -193,11 +193,11 @@ void determineNeighbors() {
 }
 
 void createContext() {
-    voxelModel->createContext(voxelModel->positions, voxelModel->heightMap);
-    treeModel->createContext(treeModel->positions, treeModel->heightMap);
-    rockModel->createContext(rockModel->positions, rockModel->heightMap);
-    //cowModel->createContext(cowModel->positions, cowModel->heightMap);
-    //dogModel->createContext(dogModel->positions, dogModel->heightMap);
+    voxelModel->createContext();
+    treeModel->createContext();
+    rockModel->createContext();
+    //cowModel->createContext();
+    //dogModel->createContext();
 }
 
 bool rayCast(int* out_x, int* out_z) {
@@ -222,7 +222,7 @@ bool rayCast(int* out_x, int* out_z) {
         }
         else if (buttonPressedTimes++ >= 10) {
             voxelModel->heightMap[x_quantized * GRID_SIZE + z_quantized]++;
-            voxelModel->createContext(voxelModel->positions, voxelModel->heightMap);
+            voxelModel->createContext();
             buttonPressedTimes = 0;
             buttonPressed = false;
         }
