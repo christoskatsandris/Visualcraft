@@ -122,14 +122,14 @@ void Camera::update(float columnHighestBlock, bool frontMoveAllowed, bool backMo
     
 
     // Handle zoom in/out effects
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        //FoV -= fovSpeed;
-        position += vec3(0, 1, 0) * deltaTime * speed;
-    }
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        //FoV += fovSpeed;
-        position -= vec3(0, 1, 0) * deltaTime * speed;
-    }
+    //if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+    //    //FoV -= fovSpeed;
+    //    position += vec3(0, 1, 0) * deltaTime * speed;
+    //}
+    //if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+    //    //FoV += fovSpeed;
+    //    position -= vec3(0, 1, 0) * deltaTime * speed;
+    //}
 
     // Construct projection and view matrices
     projectionMatrix = perspective(radians(FoV), 4.0f / 3.0f, 0.1f, 100.0f);
