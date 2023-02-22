@@ -100,13 +100,9 @@ void prepareShaders() {
 
 void createModels() {
     voxelModel = new Voxel(0, 0, 0);
-    cout << endl << "========= Tree =========" << endl;
     treeModel = new Object("../assets/models/tree.obj", 5, 5, 5, 1000);
-    cout << endl << "========= Rock =========" << endl;
     rockModel = new Object("../assets/models/rock.obj", 1, 1, 1, 45);
-    //cout << endl << "========= Cow  =========" << endl;
     //cowModel = new Animal();
-    //cout << endl << "========= Dog  =========" << endl;
     //dogModel = new Animal();
 
     voxelModel->heightMap = createPerlinNoise(GRID_SIZE, GRID_SIZE, GRID_SIZE);

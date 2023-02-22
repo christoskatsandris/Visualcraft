@@ -49,8 +49,6 @@ void Object::voxelize(std::string path, int xsize, int ysize, int zsize, int ver
 					}
 				);
 
-				std::cout << "Vertices in (" << x << ", " << y << ", " << z << "): " << cntr << std::endl;
-
 				if (cntr > vertex_threshold) {
 					voxels.push_back(new Voxel(x, y, z));
 				}
