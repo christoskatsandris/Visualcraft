@@ -10,7 +10,7 @@
 
 using namespace glm;
 
-void Model::createContext(std::vector<vec3> modelPositions, std::vector<float> modelHeightMap) {
+void Model::createContext() {
     glGenVertexArrays(1, &modelVAO);
     glBindVertexArray(modelVAO);
 
@@ -34,14 +34,14 @@ void Model::createContext(std::vector<vec3> modelPositions, std::vector<float> m
 
     glGenBuffers(1, &modelPositionsVBO);
     glBindBuffer(GL_ARRAY_BUFFER, modelPositionsVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * modelPositions.size(), &modelPositions[0][0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * positions.size(), &positions[0][0], GL_STATIC_DRAW);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(3);
     glVertexAttribDivisor(3, 1);
 
     glGenBuffers(1, &modelHeightMapVBO);
     glBindBuffer(GL_ARRAY_BUFFER, modelHeightMapVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * modelHeightMap.size(), &modelHeightMap[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * heightMap.size(), &heightMap[0], GL_STATIC_DRAW);
     glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(4);
     glVertexAttribDivisor(4, 1);
@@ -59,7 +59,7 @@ void Model::bind() {
     glBindVertexArray(modelVAO);
 }
 
-void Model::render(bool renderLight, Program* shader, mat4 modelMatrix, mat4 viewMatrix, mat4 projectionMatrix, int objectID, GLuint textureAtlas, Light* light, int count) {
+void Model::render(bool renderLight, Program* shader, mat4 modelMatrix, mat4 viewMatrix, mat4 projectionMatrix, int objectID, int rayCastedID, GLuint textureAtlas, Light* light, int count) {
     glUseProgram(shader->program);
     this->bind();
 
@@ -67,6 +67,7 @@ void Model::render(bool renderLight, Program* shader, mat4 modelMatrix, mat4 vie
     glUniformMatrix4fv(shader->V, 1, GL_FALSE, &viewMatrix[0][0]);
     glUniformMatrix4fv(shader->M, 1, GL_FALSE, &modelMatrix[0][0]);
     glUniform1i(shader->objectID, objectID);
+    glUniform1i(shader->rayCastedID, rayCastedID);
 
     if (renderLight) {
         light->uploadToShader(((LightProgram*)shader)->La, ((LightProgram*)shader)->Ld, ((LightProgram*)shader)->Ls, ((LightProgram*)shader)->lightPosition, ((LightProgram*)shader)->lightPower);
