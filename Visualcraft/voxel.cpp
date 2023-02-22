@@ -223,6 +223,16 @@ void Voxel::destroyObject(int index, int position) {
     materials.erase(std::next(materials.begin(), position));
     objectsBuilt.erase(std::next(objectsBuilt.begin(), position));
     removeFromBuiltPositions(index, --objectsBuilt[index]);
+
+    for (int i = 0; i < builtPositions.size(); i++) {
+        auto tuple = builtPositions[i];
+        for (int j = 0; j < std::get<1>(tuple).size(); j++) {
+            auto thisPosition = std::get<1>(tuple)[j];
+            if (thisPosition >= position) {
+                std::get<1>(builtPositions[i])[j]--;
+            }
+        }
+    }
 }
 
 void Voxel::addInBuiltPositions(int index, int position) {
