@@ -7,10 +7,9 @@ enum Material {
 	BRICK = 49,
 	GLASS = 50,
 	CONCRETE = 51,
-	WHEAT = 52,
-	GRASS = 53,
-	SAND = 54,
-	STONE = 55
+	GRASS = 52,
+	SAND = 53,
+	STONE = 54
 };
 
 #endif

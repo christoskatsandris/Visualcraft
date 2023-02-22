@@ -248,19 +248,15 @@ vec4 chooseTexture() {
 					chosenTexture = concreteTexture();
 					break;
 
-				case 52: // Material::WHEAT
-					chosenTexture = wheatTexture();
-					break;
-
-				case 53: // Material::GRASS
+				case 52: // Material::GRASS
 					chosenTexture = grassBlockTexture();
 					break;
 
-				case 54: // Material::SAND
+				case 53: // Material::SAND
 					chosenTexture = sandTexture();
 					break;
 
-				case 55: // Material::STONE
+				case 54: // Material::STONE
 					chosenTexture = stoneTexture();
 					break;
 			}

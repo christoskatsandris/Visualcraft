@@ -432,10 +432,10 @@ void pollMouse(GLFWwindow* window, int button, int action, int mods) {
 
 void pollKeyboard(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_1 || key == GLFW_KEY_2 || key == GLFW_KEY_3 || key == GLFW_KEY_4 || key == GLFW_KEY_5 || key == GLFW_KEY_6 || key == GLFW_KEY_7) {
+        if (key == GLFW_KEY_1 || key == GLFW_KEY_2 || key == GLFW_KEY_3 || key == GLFW_KEY_4 || key == GLFW_KEY_5 || key == GLFW_KEY_6) {
             selectedMaterial = (Material)key;
         }
-        else if (key == GLFW_KEY_0) {
+        else if (key == GLFW_KEY_7 || key == GLFW_KEY_8 || key == GLFW_KEY_9 || key == GLFW_KEY_0) {
             selectedMaterial = Material::DEFAULT_MATERIAL;
         }
     }
