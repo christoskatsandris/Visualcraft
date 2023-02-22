@@ -16,6 +16,8 @@ in vec2 vertex_UV;
 in float heightmap;
 in vec4 vertex_position_lightspace;
 flat in int instanceID;
+flat in int material;
+flat in int exclusion;
 
 out vec4 color;
 
@@ -100,112 +102,183 @@ vec4 phong(float visibility, Light lightParam, vec4 chosenTexture) {
     );
 }
 
+// ----------------- Functions that select a texture ----------------- //
+vec4 overlayWater(vec4 chosenTexture) {
+	return mix(chosenTexture, texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.2f)), 0.5);
+}
+vec4 sandTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.0f));
+}
+vec4 grassPathTexture() {
+	vec4 chosenTexture;
+	// Top face
+	if (vertex_position_modelspace.y > 0.48) {
+		chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.0f)); // grassPathTop
+	}
+	// Side or bottom faces
+	else {
+		chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.0f)); // grassPathSide
+	}
+	return chosenTexture;
+}
+vec4 grassBlockTexture() {
+	vec4 chosenTexture;
+	// Top face
+	if (vertex_position_modelspace.y > 0.48) {
+		chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.0f)); // grassBlockTop
+	}
+	// Side or bottom faces
+	else {
+		chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.0f)); // grassBlockSide
+	}
+	return chosenTexture;
+}
+vec4 brickTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.4f));
+}
+vec4 glassTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.4f));
+}
+vec4 concreteTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.4f));
+}
+vec4 wheatTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.4f));
+}
+vec4 stoneTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.4f));
+}
+
+vec4 treeTexture() {
+	vec4 chosenTexture;
+	// Log
+	if (vertex_position_modelspace.y < 0.495) {
+		// Top face
+		if (vertex_position_modelspace.y > 0.48) {
+			chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.2f));
+		}
+		// Side or bottom faces
+		else {
+			chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.2f));
+		}
+	}
+	// Leaves
+	else {
+		chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.2f));
+	}
+	return chosenTexture;
+}
+vec4 rockTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.2f));
+}
+vec4 dogTexture() {
+	return texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.4f));
+}
+vec4 highlightBorders(vec4 chosenTexture) {
+	if (
+		// Bottom face
+		vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.x < -0.49 ||
+		vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.x > 0.49 ||
+		vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.z < -0.49 ||
+		vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.z > 0.49 ||
+
+		// Top face
+		vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.x < -0.49 ||
+		vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.x > 0.49 ||
+		vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.z < -0.49 ||
+		vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.z > 0.49 ||
+
+		// Front face
+		vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.x < -0.49 ||
+		vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.x > 0.49 ||
+		vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.y < -0.49 ||
+		vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.y > 0.49 ||
+
+		// Back face
+		vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.x < -0.49 ||
+		vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.x > 0.49 ||
+		vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.y < -0.49 ||
+		vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.y > 0.49 ||
+
+		// Right face
+		vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.y < -0.49 ||
+		vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.y > 0.49 ||
+		vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.z < -0.49 ||
+		vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.z > 0.49 ||
+
+		// Left face
+		vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.y < -0.49 ||
+		vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.y > 0.49 ||
+		vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.z < -0.49 ||
+		vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.z > 0.49
+	) {
+		chosenTexture = vec4(0,0,0,1);
+	}
+	return chosenTexture;
+}
+
+// ------------------------------------------------------------------- //
+
 vec4 chooseTexture() {
     vec4 chosenTexture;
 
     switch (objectID) {
         case 0: // Voxel
-	        // Beneath the water surface: Sand with water
-	        if (vertex_position_worldspace.y < -0.49) {
-		        chosenTexture = mix(texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.0f)), texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.2f)), 0.5);
-	        }
-	        // Little above the water surface: Sand
-	        else if (vertex_position_worldspace.y < 0.51) {
-		        chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.0f)); // sand
-	        }
-	        // High above the water surface: Grass path
-	        else if (vertex_position_worldspace.y < 1.51 - heightmap - 2)
-	        {
-		        // Top face
-		        if (vertex_position_modelspace.y > 0.48) {
-			        chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.0f)); // grassPathTop
-		        }
-		        // Side or bottom faces
-		        else {
-			        chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.0f)); // grassPathSide
-		        }
-	        }
-	        // Highest block: Grass block
-	        else {
-		        // Top face
-		        if (vertex_position_modelspace.y > 0.48) {
-			        chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.0f)); // grassBlockTop
-		        }
-		        // Side or bottom faces
-		        else {
-			        chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.0f)); // grassBlockSide
-		        }
-	        }
+			switch (material) {
+				case 0: // Material::DEFAULT_MATERIAL
+					// Beneath the water surface: Sand with water
+					if (vertex_position_worldspace.y < -0.49) chosenTexture = overlayWater(sandTexture());
+					// Little above the water surface: Sand
+					else if (vertex_position_worldspace.y < 0.51) chosenTexture = sandTexture();
+					// High above the water surface: Grass path
+					else if (vertex_position_worldspace.y < 1.51 - heightmap - 2) chosenTexture = grassPathTexture();
+					// Highest block: Grass block
+					else chosenTexture = grassBlockTexture();
+					break;
 
-			// If ray casted, draw black border.
-			if (rayCastedID == instanceID) {
-				if (
-					// Bottom face
-					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.x < -0.49 ||
-					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.x > 0.49 ||
-					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.z < -0.49 ||
-					vertex_position_modelspace.y < -0.49 && vertex_position_modelspace.z > 0.49 ||
+				case 49: // Material::BRICK
+					chosenTexture = brickTexture();
+					break;
 
-					// Top face
-					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.x < -0.49 ||
-					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.x > 0.49 ||
-					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.z < -0.49 ||
-					vertex_position_modelspace.y > 0.49 && vertex_position_modelspace.z > 0.49 ||
+				case 50: // Material::GLASS
+					chosenTexture = glassTexture();
+					break;
 
-					// Front face
-					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.x < -0.49 ||
-					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.x > 0.49 ||
-					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.y < -0.49 ||
-					vertex_position_modelspace.z > 0.49 && vertex_position_modelspace.y > 0.49 ||
+				case 51: // Material:CONCRETE
+					chosenTexture = concreteTexture();
+					break;
 
-					// Back face
-					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.x < -0.49 ||
-					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.x > 0.49 ||
-					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.y < -0.49 ||
-					vertex_position_modelspace.z < -0.49 && vertex_position_modelspace.y > 0.49 ||
+				case 52: // Material::WHEAT
+					chosenTexture = wheatTexture();
+					break;
 
-					// Right face
-					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.y < -0.49 ||
-					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.y > 0.49 ||
-					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.z < -0.49 ||
-					vertex_position_modelspace.x > 0.49 && vertex_position_modelspace.z > 0.49 ||
+				case 53: // Material::GRASS
+					chosenTexture = grassBlockTexture();
+					break;
 
-					// Left face
-					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.y < -0.49 ||
-					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.y > 0.49 ||
-					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.z < -0.49 ||
-					vertex_position_modelspace.x < -0.49 && vertex_position_modelspace.z > 0.49
-				) {
-					chosenTexture = vec4(0,0,0,1);
-				}
+				case 54: // Material::SAND
+					chosenTexture = sandTexture();
+					break;
+
+				case 55: // Material::STONE
+					chosenTexture = stoneTexture();
+					break;
 			}
 
+			// If ray casted, draw black border.
+			if (rayCastedID == instanceID) chosenTexture = highlightBorders(chosenTexture);
 			break;
 
         case 1: // Tree
-			// Log
-			if (vertex_position_modelspace.y < 0.495) {
-				// Top face
-				if (vertex_position_modelspace.y > 0.48) {
-					chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.4f, 0.2f));
-				}
-				// Side or bottom faces
-				else {
-					chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.2f, 0.2f));
-				}
-			}
-			// Leaves
-			else {
-				chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.6f, 0.2f));
-			}
+			chosenTexture = treeTexture();
 			break;
 
 		case 2: // Rock
-			chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.8f, 0.2f));
+			chosenTexture = rockTexture();
 			break;
 
 		case 3: // Dog
-			chosenTexture = texture(textureAtlasSampler, vertex_UV + vec2(0.0f, 0.4f));
+			chosenTexture = dogTexture();
 			break;
 
 		default:

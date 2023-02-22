@@ -8,6 +8,7 @@
 #include <common/camera.h>
 #include <common/light.h>
 #include <common/program.h>
+#include "material.h"
 
 class Model {
 private:

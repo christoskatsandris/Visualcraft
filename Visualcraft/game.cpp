@@ -39,12 +39,13 @@ void calculateRockPositions();
 //void calculateDogPositions();
 void determineNeighbors();
 void createContext();
-bool rayCast(int* out_x, int* out_z);
+int rayCast();
 void depth_pass();
 void lighting_pass(int rayCastedID);
 void mainLoop();
 void free();
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void pollKeyboard(GLFWwindow* window, int key, int scancode, int action, int mods);
 void pollMouse(GLFWwindow* window, int button, int action, int mods);
 Camera* setCameraLocation(float x, float z);
 float getColumnHighestBlock(int x_quantized, int z_quantized);
@@ -66,6 +67,11 @@ Program* shader, * depthShader;
 Camera* camera;
 Light* light;
 
+// Mouse interactivity
+bool breakButtonPressed = false, buildButtonPressed = false;
+int breakButtonPressedTimes = 0;
+Material selectedMaterial = Material::DEFAULT_MATERIAL;
+
 // Object models
 Voxel* voxelModel;
 //vector<vector<bool>> neighbors(GRID_SIZE*GRID_SIZE);
@@ -74,9 +80,6 @@ Object* treeModel, * rockModel;
 
 // GLSL variables: Textures
 GLuint textureAtlas;
-
-bool buttonPressed = false;
-int buttonPressedTimes = 0;
 
 void prepareShaders() {
     // Create programs
@@ -108,20 +111,22 @@ void createModels() {
 
     voxelModel->heightMap = createPerlinNoise(GRID_SIZE, GRID_SIZE, GRID_SIZE);
 
-    camera = setCameraLocation(0, 0);
-
     calculateVoxelPositions();
     calculateTreePositions();
     calculateRockPositions();
     //calculateCowPositions();
     //calculateDogPositions();
     //determineNeighbors();
+    
+    camera = setCameraLocation(0, 0);
 }
 
 void calculateVoxelPositions() {
     for (int x = -GRID_SIZE / 2; x < GRID_SIZE / 2; x++) {
         for (int z = -GRID_SIZE / 2; z < GRID_SIZE / 2; z++) {
             voxelModel->positions.push_back(vec3(x, 0, z));
+            voxelModel->materials.push_back(Material::DEFAULT_MATERIAL);
+            voxelModel->objectsBuilt.push_back(0);
         }
     }
 }
@@ -200,39 +205,69 @@ void createContext() {
     //dogModel->createContext();
 }
 
-bool rayCast(int* out_x, int* out_z) {
+int rayCast() {
     int raycast_steps = 1;
     bool voxelFound = false;
-    int x_quantized, z_quantized;    
+    int x_quantized, heightFound, z_quantized;
     float voxelHeight;
+    int instanceID;
 
     while (!voxelFound && raycast_steps < 10) {
         vec3 point = camera->position + (raycast_steps++ * 0.5f) * camera->direction;
         getBlockPositionFromCoordinates(point.x, point.z, &x_quantized, &z_quantized);
-        voxelHeight = voxelModel->heightMap[x_quantized * GRID_SIZE + z_quantized];
-        if (point.y < -voxelHeight + 0.5f && point.y > -voxelHeight - 0.5f) {
-            voxelFound = true;
+        voxelHeight = getColumnHighestBlock(x_quantized, z_quantized);
+        int objects = voxelModel->objectsBuilt[x_quantized * GRID_SIZE + z_quantized];
+        voxelHeight -= objects;
+        for (int i = objects; i >= 0; i--) {
+            if (point.y < voxelHeight + i && point.y > voxelHeight + i - 1.0f) {
+                voxelFound = true;
+                heightFound = voxelHeight + i;
+                if (i == 0) {
+                    instanceID = x_quantized * GRID_SIZE + z_quantized;
+                }
+                else {
+                    instanceID = voxelModel->getFromBuiltPositions(x_quantized * GRID_SIZE + z_quantized, i);
+                }
+            }
         }
     }
 
-    if (buttonPressed) {
+    if (breakButtonPressed) {
         if (!voxelFound) {
-            buttonPressedTimes = 0;
-            buttonPressed = false;
+            breakButtonPressedTimes = 0;
+            breakButtonPressed = false;
         }
-        else if (buttonPressedTimes++ >= 10) {
-            voxelModel->heightMap[x_quantized * GRID_SIZE + z_quantized]++;
+        else if (breakButtonPressedTimes++ >= 10) {
+            if (instanceID == x_quantized * GRID_SIZE + z_quantized) {
+                voxelModel->heightMap[x_quantized * GRID_SIZE + z_quantized]++;
+            }
+            else {
+                voxelModel->destroyObject(x_quantized * GRID_SIZE + z_quantized, instanceID);
+            }
             voxelModel->createContext();
-            buttonPressedTimes = 0;
-            buttonPressed = false;
+            breakButtonPressedTimes = 0;
+            breakButtonPressed = false;
+        }
+    }
+
+    if (buildButtonPressed) {
+        if (!voxelFound) {
+            buildButtonPressed = false;
+        }
+        else if (selectedMaterial != Material::DEFAULT_MATERIAL) {
+            vec3 position = vec3(x_quantized - GRID_SIZE / 2, -heightFound, z_quantized - GRID_SIZE / 2);
+            voxelModel->buildObject(position, selectedMaterial, GRID_SIZE, x_quantized, z_quantized);
+            voxelModel->createContext();
+            buildButtonPressed = false;
         }
     }
 
     if (voxelFound) {
-        *out_x = x_quantized;
-        *out_z = z_quantized;
+        return instanceID;
     }
-    return voxelFound;
+    else {
+        return -1;
+    }
 }
 
 void depth_pass() {
@@ -242,11 +277,11 @@ void depth_pass() {
 
     mat4 modelMatrix = mat4();
 
-    voxelModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 0, -1, NULL, NULL, GRID_SIZE * GRID_SIZE);
+    voxelModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 0, -1, NULL, NULL, voxelModel->positions.size());
     treeModel ->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 1, -1, NULL, NULL, treeModel->positions.size());
     rockModel ->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 2, -1, NULL, NULL, rockModel->positions.size());
-    //cowModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, -1, NULL, NULL, cowModel->positions.size());
-    //dogModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, -1, NULL, NULL, dogModel->positions.size());
+    //cowModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 3, -1, NULL, NULL, cowModel ->positions.size());
+    //dogModel->render(false, depthShader, modelMatrix, light->viewMatrix, light->projectionMatrix, 4, -1, NULL, NULL, dogModel ->positions.size());
 }
 
 void lighting_pass(int rayCastedID) {
@@ -256,11 +291,11 @@ void lighting_pass(int rayCastedID) {
 
     mat4 modelMatrix = mat4();
 
-    voxelModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 0, rayCastedID, textureAtlas, light, GRID_SIZE * GRID_SIZE);
+    voxelModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 0, rayCastedID, textureAtlas, light, voxelModel->positions.size());
     treeModel ->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 1, rayCastedID, textureAtlas, light, treeModel->positions.size());
     rockModel ->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 2, rayCastedID, textureAtlas, light, rockModel->positions.size());
-    //cowModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, rayCastedID, textureAtlas, light, cowModel->positions.size());
-    //dogModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, rayCastedID, textureAtlas, light, dogModel->positions.size());
+    //cowModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 3, rayCastedID, textureAtlas, light, cowModel ->positions.size());
+    //dogModel->render(true, shader, modelMatrix, camera->viewMatrix, camera->projectionMatrix, 4, rayCastedID, textureAtlas, light, dogModel ->positions.size());
 }
 
 void mainLoop() {
@@ -273,18 +308,10 @@ void mainLoop() {
         camera->update(getColumnHighestBlock(thisx, thisz), frontMoveAllowed, backMoveAllowed, rightMoveAllowed, leftMoveAllowed, jumpAllowed);
         light->update(camera->position);
 
-        int rayCastedx, rayCastedz;
-        bool somethingCasted = rayCast(&rayCastedx, &rayCastedz);
-
+        int castedBlockID = rayCast();
+        
         depth_pass();
-
-        if (somethingCasted) {
-            lighting_pass(rayCastedx * GRID_SIZE + rayCastedz);
-        }
-        else {
-            lighting_pass(-1);
-        }
-
+        lighting_pass(castedBlockID);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -337,7 +364,7 @@ void initialize() {
     // Sky blue background color
     glClearColor(0.53f, 0.81f, 0.92f, 0.5f);
 
-    //glfwSetKeyCallback(window, pollKeyboard);
+    glfwSetKeyCallback(window, pollKeyboard);
     glfwSetMouseButtonCallback(window, pollMouse);
 
     // Enable depth test
@@ -394,11 +421,27 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void pollMouse(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        buttonPressed = true;
+    switch (button) {
+    case GLFW_MOUSE_BUTTON_LEFT:
+        if (action == GLFW_PRESS) breakButtonPressed = true;
+        else breakButtonPressed = false;
+        break;
+
+    case GLFW_MOUSE_BUTTON_RIGHT:
+        if (action == GLFW_PRESS) buildButtonPressed = true;
+        else buildButtonPressed = false;
+        break;
     }
-    else {
-        buttonPressed = false;
+}
+
+void pollKeyboard(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (action == GLFW_PRESS) {
+        if (key == GLFW_KEY_1 || key == GLFW_KEY_2 || key == GLFW_KEY_3 || key == GLFW_KEY_4 || key == GLFW_KEY_5 || key == GLFW_KEY_6 || key == GLFW_KEY_7) {
+            selectedMaterial = (Material)key;
+        }
+        else if (key == GLFW_KEY_0) {
+            selectedMaterial = Material::DEFAULT_MATERIAL;
+        }
     }
 }
 
@@ -415,7 +458,11 @@ Camera* setCameraLocation(float x, float z) {
 }
 
 float getColumnHighestBlock(int x_quantized, int z_quantized) {
-    return -voxelModel->heightMap[GRID_SIZE * x_quantized + z_quantized] + 1.0f;
+    float height = -voxelModel->heightMap[GRID_SIZE * x_quantized + z_quantized] + 1.0f;
+    if (voxelModel->objectsBuilt[GRID_SIZE * x_quantized + z_quantized] > 0) {
+        height += voxelModel->objectsBuilt[GRID_SIZE * x_quantized + z_quantized];
+    }
+    return height;
 }
 
 void getBlockPositionFromCoordinates(float x, float z, int* out_x, int* out_z) {

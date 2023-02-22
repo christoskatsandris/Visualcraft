@@ -103,6 +103,7 @@ add_executable(Visualcraft
 
   Visualcraft/animal.h
   Visualcraft/animal.cpp
+  Visualcraft/material.h
   Visualcraft/model.h
   Visualcraft/model.cpp
   Visualcraft/object.h

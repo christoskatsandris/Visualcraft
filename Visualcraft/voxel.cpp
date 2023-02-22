@@ -190,3 +190,61 @@ void Voxel::defineUVs() {
         vec2(0.002f, 0.098f)
     };
 }
+
+void Voxel::createContext() {
+    Model::createContext();
+
+    glGenBuffers(1, &modelMaterialsVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, modelMaterialsVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * materials.size(), &materials[0], GL_STATIC_DRAW);
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(5);
+    glVertexAttribDivisor(5, 1);
+}
+
+Voxel::~Voxel() {
+    Model::~Model();
+
+    glDeleteBuffers(1, &modelMaterialsVBO);
+}
+
+void Voxel::buildObject(vec3 position, Material selectedMaterial, int GRID_SIZE, int x_quantized, int z_quantized) {
+    positions.push_back(position);
+    materials.push_back(selectedMaterial);
+    objectsBuilt.push_back(0);
+    if (objectsBuilt[x_quantized * GRID_SIZE + z_quantized] != -1) {
+        objectsBuilt[x_quantized * GRID_SIZE + z_quantized] += 1;
+    }
+    addInBuiltPositions(x_quantized * GRID_SIZE + z_quantized, objectsBuilt.size() - 1);
+}
+
+void Voxel::destroyObject(int index, int position) {
+    positions.erase(std::next(positions.begin(), position));
+    materials.erase(std::next(materials.begin(), position));
+    objectsBuilt.erase(std::next(objectsBuilt.begin(), position));
+    removeFromBuiltPositions(index, --objectsBuilt[index]);
+}
+
+void Voxel::addInBuiltPositions(int index, int position) {
+    auto it = std::find_if(builtPositions.begin(), builtPositions.end(), [index](const std::tuple<int, std::vector<int>>& e) {return std::get<0>(e) == index; });
+    if (it != builtPositions.end()) {
+        std::get<1>(*it).push_back(position);
+    }
+    else {
+        builtPositions.push_back(std::make_tuple(index, std::vector<int>{position}));
+    }
+}
+
+void Voxel::removeFromBuiltPositions(int index, int position) {
+    auto it = std::find_if(builtPositions.begin(), builtPositions.end(), [index](const std::tuple<int, std::vector<int>>& e) {return std::get<0>(e) == index; });
+    if (it != builtPositions.end()) {
+        std::get<1>(*it).erase(std::next(std::get<1>(*it).begin(), position));
+    }
+}
+
+int Voxel::getFromBuiltPositions(int index, int heightFound) {
+    auto it = std::find_if(builtPositions.begin(), builtPositions.end(), [index](const std::tuple<int, std::vector<int>>& e) {return std::get<0>(e) == index; });
+    if (it != builtPositions.end()) {
+        return std::get<1>(*it)[heightFound-1];
+    }
+}
